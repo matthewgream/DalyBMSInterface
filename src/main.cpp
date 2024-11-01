@@ -4,25 +4,8 @@
 
 #include <Arduino.h>
 
-#define DEBUG
-#define DEBUG_LOGGER_SERIAL_BAUD 115200
-
-#ifdef DEBUG
-    #define DEBUG_START(...) Serial.begin (DEBUG_LOGGER_SERIAL_BAUD);
-    #define DEBUG_END(...) Serial.flush (); Serial.end ();
-    #define DEBUG_PRINTF Serial.printf
-    #define DEBUG_ONLY(...) __VA_ARGS__
-#else
-    #define DEBUG_START(...)
-    #define DEBUG_END(...)
-    #define DEBUG_PRINTF(...) do {} while (0)
-    #define DEBUG_ONLY(...)
-#endif
-
-// -----------------------------------------------------------------------------------------------
-
 #include "Utilities.hpp"
-#include "ComponentsHardwareDalyBMS.hpp"
+#include "DalyBMSInterface.hpp"
 
 // -----------------------------------------------------------------------------------------------
 
