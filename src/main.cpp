@@ -2,120 +2,62 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#include <Arduino.h>
-
-#include "Utilities.hpp"
-#include "DalyBMSInterface.hpp"
+typedef unsigned long interval_t;
+typedef unsigned long counter_t;
 
 // -----------------------------------------------------------------------------------------------
 
-#include <memory>
+#include <Arduino.h>
 
-class DalyAggregationManager {
-
+class Intervalable {
+    interval_t _interval, _previous{};
 public:
-    static inline constexpr int SERIAL_BUFFER_SIZE = 1024;
-    static inline constexpr int SERIAL_BAUD_RATE = 9600;
-    
-    using DalyConfiguration = daly_bms::Interface::Config;
-    using DalyCapabilities = daly_bms::Capabilities;
-    using DalyCategories = daly_bms::Categories;
-
-    struct ConfigInstance {
-        DalyConfiguration daly;
-        int serialBaud = SERIAL_BAUD_RATE;
-        int serialBuffer = SERIAL_BUFFER_SIZE;
-        int serialId;
-        int serialRxPin, serialTxPin;
-        int enPin = -1;
-    };
-    struct Config {
-        std::vector<ConfigInstance> instances;
-    };
-
-private:
-    const Config& config;
-    
-    using Hardware = HardwareSerial;
-    using Connector = daly_bms::HardwareSerialConnector;
-    using Interface = daly_bms::Interface;
-
-    struct Instance {
-        const ConfigInstance &config;
-        Hardware hardware;
-        Connector connector;
-        Interface interface;
-        Instance(const ConfigInstance& conf): config (conf), hardware (config.serialId), connector (hardware), interface (config.daly, connector) {
-            hardware.setRxBufferSize (config.serialBuffer);
-            hardware.begin (config.serialBaud, SERIAL_8N1, config.serialRxPin, config.serialTxPin);    
-            if (config.enPin >= 0)
-                digitalWrite (config.enPin, HIGH);
-            interface.begin ();
+    explicit Intervalable(const interval_t interval = 0) : _interval(interval) {}
+    operator bool() {
+        const interval_t current = millis();
+        if (current - _previous > _interval) {
+            _previous = current;
+            return true;
         }
-        ~Instance() {
-            hardware.flush ();
-            if (config.enPin >= 0)
-                digitalWrite (config.enPin, LOW);
-            hardware.end ();                       
-        }
-    };
-
-    std::vector<std::shared_ptr<Instance>> instances;
-    std::vector<Interface*> interfaces;
-
-public:
-    DalyAggregationManager (const Config &conf): config (conf) {}
-    ~DalyAggregationManager () { end (); }
-
-    bool begin () {
-        bool began = false;
-        exception_catcher(
-            [&] {
-                for (auto& instanceConfig: config.instances) {
-                    instances.push_back (std::make_shared<Instance> (instanceConfig));
-                    interfaces.push_back (&instances.back ()->interface);
-                }
-                began = true;
-            },
-            [&] { end (); });
-        return began;
+        return false;
     }
-
-    void end () {
-        interfaces.clear ();
-        instances.clear ();
-    }
-
-    //
-
-    void loop() { forEachInterface<&Interface::loop>(); }
-    void requestStatus() { forEachInterface<&Interface::requestStatus>(); }
-    void requestDiagnostics() { forEachInterface<&Interface::requestDiagnostics>(); }
-    void dumpDebug() const { forEachInterface<&Interface::dumpDebug>(); }
-
-private:
-    template<auto MethodPtr> void forEachInterface() {
-        for (auto& interface : interfaces)
-            (interface->*MethodPtr)();
-    }
-    template<auto MethodPtr> void forEachInterface() const {
-        for (auto& interface : interfaces)
-            (interface->*MethodPtr)();
+    void wait() {
+        const interval_t current = millis();
+        if (current - _previous < _interval)
+            delay(_interval - (current - _previous));
+        _previous = millis();
     }
 };
 
 // -----------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------
 
-void testDirect () {
+#include "DalyBMSManager.hpp"
 
-    const int serialId = 1, serialRxPin = 5, serialTxPin = 4, enPin = 5;
+// -----------------------------------------------------------------------------------------------
+
+// TEST_DEVICE = ESP32-S3-DEVKITC-1
+// https://docs.espressif.com/projects/esp-idf/en/v5.3.1/esp32s3/hw-reference/esp32s3/user-guide-devkitc-1.html
+// device 1 - GPIO 5, 6, 7 (rx, tx, en) + gnd
+// device 2 - GPIO 15, 16, 17 (rx, tx, en) + gnd
+
+static constexpr int MANAGER_PIN_RX = GPIO_NUM_5, MANAGER_PIN_TX = GPIO_NUM_6, MANAGER_PIN_EN = GPIO_NUM_7, MANAGER_ID = 1;
+static constexpr const char* MANAGER_NAME = "manager";
+static constexpr int BALANCE_PIN_RX = GPIO_NUM_15, BALANCE_PIN_TX = GPIO_NUM_16, BALANCE_PIN_EN = GPIO_NUM_17, BALANCE_ID = 2;
+static constexpr const char* BALANCE_NAME = "balance";
+
+// -----------------------------------------------------------------------------------------------
+
+void testDirect() {
+
+    const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
     HardwareSerial* serial;
-    
-    exception_catcher([&] {
+
+    daly_bms::exception_catcher([&] {
         serial = new HardwareSerial(serialId);
         serial->setRxBufferSize(1024);
         serial->begin(9600, SERIAL_8N1, serialRxPin, serialTxPin);
-        if (enPin >= 0) digitalWrite (enPin, HIGH);
+        if (enPin >= 0) digitalWrite(enPin, HIGH);
 
         while (1) {
             // uint8_t command [13] = { 0xA5, 0x40, 0xD9, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06 };
@@ -134,55 +76,50 @@ void testDirect () {
 
 // -----------------------------------------------------------------------------------------------
 
-Gate processGate(5 * 1000);
-Intervalable requestStatus(15 * 1000), requestDiagnostics(30 * 1000), reportData(10 * 1000);
+Intervalable processGate(5 * 1000),
+    requestStatus(15 * 1000), requestDiagnostics(30 * 1000), reportData(10 * 1000);
 
-DalyAggregationManager* dalyManager = nullptr;
+DalyAggregationManager* dalyManager{nullptr};
 
 void setup() {
 
     delay(5 * 1000);
     DEBUG_START();
     DEBUG_PRINTF("*** SETUP\n");
+    delay(60 * 1000 * 1000);
 
     //testDirect ();
 
-    DalyAggregationManager::Config *config = new DalyAggregationManager::Config ({
-        .instances = {  
-            {    
-                .daly = {
-                    .id = "manager",
-                    .capabilities = DalyAggregationManager::DalyCapabilities::All,
-                    .categories = DalyAggregationManager::DalyCategories::All
-                },
-                .serialId = 1,
-                .serialRxPin = 0,
-                .serialTxPin = 1,
-                .enPin = 2
-            },
-            {    
-                .daly = {
-                    .id = "balancer",
-                    .capabilities = DalyAggregationManager::DalyCapabilities::All,
-                    .categories = DalyAggregationManager::DalyCategories::All
-                },
-                .serialId = 2,
-                .serialRxPin = 3,
-                .serialTxPin = 4,
-                .enPin = 5
-            },            
+    DalyAggregationManager::Config* config = new DalyAggregationManager::Config({
+        .instances = {
+            { .daly = {
+                .id = MANAGER_NAME,
+                .capabilities = DalyAggregationManager::DalyCapabilities::All,
+                .categories = DalyAggregationManager::DalyCategories::All },
+                .serialId = MANAGER_ID,
+                .serialRxPin = MANAGER_PIN_RX,
+                .serialTxPin = MANAGER_PIN_TX,
+              .enPin = MANAGER_PIN_EN },
+            { .daly = { 
+                .id = BALANCE_NAME, 
+                .capabilities = DalyAggregationManager::DalyCapabilities::All, 
+                .categories = DalyAggregationManager::DalyCategories::All }, 
+                .serialId = BALANCE_ID, 
+                .serialRxPin = BALANCE_PIN_RX, 
+                .serialTxPin = BALANCE_PIN_TX, 
+                .enPin = BALANCE_PIN_EN },
         }
     });
     dalyManager = new DalyAggregationManager(*config);
-    if (!dalyManager || !dalyManager->begin ()) {
+    if (!dalyManager || !dalyManager->begin()) {
         DEBUG_PRINTF("*** FAILED\n");
         esp_deep_sleep_start();
     }
 }
 
 void loop() {
-    processGate.waitforThreshold();
-    exception_catcher([&] {
+    processGate.wait();
+    daly_bms::exception_catcher([&] {
         DEBUG_PRINTF("*** LOOP\n");
         dalyManager->loop();
         if (requestStatus) dalyManager->requestStatus();
