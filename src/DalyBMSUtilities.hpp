@@ -96,9 +96,6 @@ String toStringHex(const uint8_t data[], const size_t size, const char* separato
 #include <time.h>
 #include <stdio.h> // XXX change from snprintf
 
-time_t timestamp () {
-    return time (nullptr);
-}
 String toStringISO(time_t time, unsigned long ms = 0) {
     char buf[30];
     struct tm* tm = localtime(&time);
@@ -106,6 +103,10 @@ String toStringISO(time_t time, unsigned long ms = 0) {
         tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
         tm->tm_hour, tm->tm_min, tm->tm_sec, ms);
     return String(buf);
+}
+time_t timestamp () {
+    time_t t = time (nullptr);
+    return t > static_cast <time_t> (0) ? t : static_cast <time_t> (0);
 }
 
 // -----------------------------------------------------------------------------------------------

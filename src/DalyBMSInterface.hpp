@@ -61,20 +61,23 @@ protected:
         return false;
     }
     bool readStateProcessingHeader(uint8_t byte) {
+        // DEBUG_PRINTF ("frame(header)[%d]=%02X\n", _readOffset, byte);
         _readFrame[_readOffset] = byte;
         if (++_readOffset < RequestResponseFrame::Constants::SIZE_HEADER)
             return false;
-        if (_readFrame[RequestResponseFrame::Constants::OFFSET_ADDRESS] >= RequestResponseFrame::Constants::VALUE_ADDRESS_SLAVE)
+        if (_readFrame[RequestResponseFrame::Constants::OFFSET_ADDRESS] > RequestResponseFrame::Constants::VALUE_ADDRESS_BMS_MASTER)
             return true;
         _readState = ReadState::ProcessingContent;
         return false;
     }
     bool readStateProcessingContent(uint8_t byte) {
+        // DEBUG_PRINTF ("frame(content)[%d]=%02X\n", _readOffset, byte);
         _readFrame[_readOffset] = byte;
         if (++_readOffset < RequestResponseFrame::Constants::SIZE_FRAME)
             return false;
         if (_readFrame.valid())
             notifyHandlers(Handler::Type(_readFrame, Direction::Receive));
+        else DEBUG_PRINTF ("frame invalid\n");
         return true;
     }
 
@@ -96,10 +99,23 @@ private:
 class RequestResponseManager: public Handlerable <RequestResponse&, bool> {
 public:
     bool receiveFrame(const RequestResponseFrame& frame) {
+        DEBUG_PRINTF ("receive_frame: %d\n", frame.getCommand ());
         auto it = _requestsMap.find(frame.getCommand());
-        if (it != _requestsMap.end() && it->second->processResponse(frame))
-            if (it->second->isValid())
-                return notifyHandlers(*it->second);
+        if (it != _requestsMap.end())
+            if (it->second->processResponse(frame))
+                if (it->second->isValid()) {
+                    notifyHandlers(*it->second);
+                    return true;
+                }
+                else {
+                    if (it->second->isComplete ()) DEBUG_PRINTF ("receiveFrame: complete, but not valid\n");
+                }
+            else {
+                if (it->second->isComplete ()) DEBUG_PRINTF ("receiveFrame: could not process\n");
+            }
+        else {
+            DEBUG_PRINTF ("receiveFrame: processor not found\n");
+        }
         return false;
     }
 
@@ -121,7 +137,9 @@ enum class Capabilities {
     Managing = 1 << 0,
     Balancing = 1 << 1,
     TemperatureSensing = 1 << 3,
-    All = Managing | Balancing | TemperatureSensing
+    RealTimeClock = 1 << 4,
+    FirmwareIndex = 1 << 5,
+    All = Managing | Balancing | TemperatureSensing | RealTimeClock | FirmwareIndex
 };
 enum class Categories {
     None = 0,
@@ -152,6 +170,8 @@ inline String toString(Capabilities capability) {
         case Capabilities::Managing: return "Managing";
         case Capabilities::Balancing: return "Balancing";
         case Capabilities::TemperatureSensing: return "TemperatureSensing";
+        case Capabilities::RealTimeClock: return "RealTimeClock";
+        case Capabilities::FirmwareIndex: return "FirmwareIndex";
         case Capabilities::All: return "All";
         default: return "Unknown";
     }
@@ -202,10 +222,10 @@ public:
     using Connector = RequestResponseFrame::Receiver;
 
     struct Information {    // unofficial
-        RequestResponse_BMS_HARDWARE_CONFIG hardware_config;
-        RequestResponse_BMS_HARDWARE_VERSION hardware_version;
-        RequestResponse_BMS_FIRMWARE_INDEX firmware_index;
-        RequestResponse_BMS_SOFTWARE_VERSION software_version;
+        RequestResponse_BMS_CONFIG config;
+        RequestResponse_BMS_HARDWARE hardware;
+        RequestResponse_BMS_FIRMWARE firmware;
+        RequestResponse_BMS_SOFTWARE software;
         RequestResponse_BATTERY_RATINGS battery_ratings;
         RequestResponse_BATTERY_CODE battery_code;
         RequestResponse_BATTERY_INFO battery_info;
@@ -213,30 +233,30 @@ public:
         RequestResponse_BMS_RTC rtc;
     } information{};
     struct Thresholds {    // unofficial
-        RequestResponse_PACK_VOLTAGES_THRESHOLDS pack_voltages;
-        RequestResponse_PACK_CURRENTS_THRESHOLDS pack_currents;
-        RequestResponse_PACK_TEMPERATURE_THRESHOLDS pack_temperatures;
-        RequestResponse_PACK_SOC_THRESHOLDS pack_soc;
-        RequestResponse_CELL_VOLTAGES_THRESHOLDS cell_voltages;
-        RequestResponse_CELL_SENSORS_THRESHOLDS cell_sensors;
-        RequestResponse_CELL_BALANCES_THRESHOLDS cell_balances;
-        RequestResponse_PACK_SHORTCIRCUIT_THRESHOLDS pack_shortcircuit;
+        RequestResponse_THRESHOLDS_VOLTAGE voltage;
+        RequestResponse_THRESHOLDS_CURRENT current;
+        RequestResponse_THRESHOLDS_SENSOR sensor;
+        RequestResponse_THRESHOLDS_CHARGE charge;
+        RequestResponse_THRESHOLDS_SHORTCIRCUIT shortcircuit;
+        RequestResponse_THRESHOLDS_CELL_VOLTAGE cell_voltage;
+        RequestResponse_THRESHOLDS_CELL_SENSOR cell_sensor;
+        RequestResponse_THRESHOLDS_CELL_BALANCE cell_balance;
     } thresholds{};
     struct Status {
-        RequestResponse_PACK_STATUS pack;
-        RequestResponse_CELL_VOLTAGES_MINMAX cell_voltages;
-        RequestResponse_CELL_TEMPERATURES_MINMAX cell_temperatures;
-        RequestResponse_MOSFET_STATUS fets;
-        RequestResponse_PACK_INFORMATION info;
-        RequestResponse_FAILURE_STATUS failures;
+        RequestResponse_STATUS status;
+        RequestResponse_VOLTAGE_MINMAX voltage;
+        RequestResponse_SENSOR_MINMAX sensor;
+        RequestResponse_MOSFET mosfet;
+        RequestResponse_INFORMATION information;
+        RequestResponse_FAILURE failure;
     } status{};
     struct Diagnostics {
-        RequestResponse_CELL_VOLTAGES voltages;
-        RequestResponse_CELL_TEMPERATURES temperatures;
-        RequestResponse_CELL_BALANCES balances;
+        RequestResponse_VOLTAGES voltages;
+        RequestResponse_SENSORS sensors;
+        RequestResponse_BALANCES balances;
     } diagnostics{};
     struct Commands {    // unofficial
-        RequestResponse_BMS_RESET reset;
+        RequestResponse_RESET reset;
         RequestResponse_MOSFET_DISCHARGE discharge;
         RequestResponse_MOSFET_CHARGE charge;
     } commands{};
@@ -244,34 +264,34 @@ public:
     explicit Interface(const Config& conf, Connector& connector)
         : requestResponsesSpecifications({
 
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.hardware_config },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.hardware_version },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.firmware_index },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.software_version },
+              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.config },
+              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.hardware },
+              { Categories::Information, Capabilities::FirmwareIndex, information.firmware }, // No response, Managing or Balancing
+              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.software },
               { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.battery_ratings },
               { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.battery_code },
               { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.battery_info },
               { Categories::Information, Capabilities::Managing, information.battery_stat },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.rtc },
+              { Categories::Information, Capabilities::RealTimeClock, information.rtc },
 
-              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.pack_voltages },
-              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.pack_currents },
-              { Categories::Thresholds, Capabilities::TemperatureSensing, thresholds.pack_temperatures },
-              { Categories::Thresholds, Capabilities::Managing, thresholds.pack_soc },
-              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.cell_voltages },
-              { Categories::Thresholds, Capabilities::TemperatureSensing, thresholds.cell_sensors },
-              { Categories::Thresholds, Capabilities::Balancing, thresholds.cell_balances },
-              { Categories::Thresholds, Capabilities::Managing, thresholds.pack_shortcircuit },
+              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.voltage },
+              { Categories::Thresholds, Capabilities::Managing, thresholds.current },
+              { Categories::Thresholds, Capabilities::TemperatureSensing, thresholds.sensor }, // Balancing response, but questionable
+              { Categories::Thresholds, Capabilities::Managing, thresholds.charge },
+              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.cell_voltage },
+              { Categories::Thresholds, Capabilities::TemperatureSensing, thresholds.cell_sensor }, // Balancing response, but questionable
+              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.cell_balance },
+              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.shortcircuit },
 
-              { Categories::Status, Capabilities::Managing, status.pack },
-              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.cell_voltages },
-              { Categories::Status, Capabilities::TemperatureSensing, status.cell_temperatures },
-              { Categories::Status, Capabilities::Managing, status.fets },
-              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.info },
-              { Categories::Status, Capabilities::Managing, status.failures },
+              { Categories::Status, Capabilities::Managing, status.status }, // Balancing response, but voltage only
+              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.voltage },
+              { Categories::Status, Capabilities::TemperatureSensing, status.sensor }, // Balancing response, is probably onboard sensor
+              { Categories::Status, Capabilities::Managing, status.mosfet },
+              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.information },
+              { Categories::Status, Capabilities::Managing, status.failure },
 
               { Categories::Diagnostics, Capabilities::Managing | Capabilities::Balancing, diagnostics.voltages },
-              { Categories::Diagnostics, Capabilities::TemperatureSensing, diagnostics.temperatures },
+              { Categories::Diagnostics, Capabilities::TemperatureSensing, diagnostics.sensors },
               { Categories::Diagnostics, Capabilities::Balancing, diagnostics.balances },
 
               { Categories::Commands, Capabilities::Managing | Capabilities::Balancing, commands.reset },
@@ -285,10 +305,10 @@ public:
             Interface& interface;
             ResponseHandler (Interface& i): interface (i) {}
             bool handle(RequestResponse& response) override {
-                if (response.getCommand() == interface.status.info) {
-                    interface.diagnostics.voltages.setCount(interface.status.info.numberOfCells);
-                    interface.diagnostics.temperatures.setCount(interface.status.info.numberOfSensors);
-                    interface.diagnostics.balances.setCount(interface.status.info.numberOfCells);
+                if (response.getCommand() == interface.status.information) {
+                    interface.diagnostics.voltages.setCount(interface.status.information.numberOfCells);
+                    interface.diagnostics.sensors.setCount(interface.status.information.numberOfSensors);
+                    interface.diagnostics.balances.setCount(interface.status.information.numberOfCells);
                     interface.manager.unregisterHandler(this);
                     delete this;
                 }
@@ -313,9 +333,9 @@ public:
     void begin() {
         DEBUG_PRINTF("DalyBMS<%s>: begin\n", config.id);
         connector.begin();
-        requestInitial();
+//        requestInitial();
     }
-    void loop() {
+    void process() {
         connector.process();
     }
 
@@ -395,7 +415,7 @@ protected:
         if (_serial.available() > 0) {
             *byte = _serial.read();
             return true;
-        } else DEBUG_PRINTF("no data\n");
+        }
         return false;
     }
     bool writeBytes(const uint8_t* data, const size_t size) override {

@@ -33,8 +33,10 @@ public:
         static constexpr size_t OFFSET_CHECKSUM = (SIZE_FRAME - 1);
 
         static constexpr uint8_t VALUE_BYTE_START = 0xA5;
-        static constexpr uint8_t VALUE_ADDRESS_HOST = 0x40;
-        static constexpr uint8_t VALUE_ADDRESS_SLAVE = 0x01;
+        static constexpr uint8_t VALUE_ADDRESS_BMS_MASTER = 0x01;
+        static constexpr uint8_t VALUE_ADDRESS_BLUETOOTH_APP = 0x80;
+        static constexpr uint8_t VALUE_ADDRESS_GPRS = 0x20;
+        static constexpr uint8_t VALUE_ADDRESS_UPPER_COMPUTER = 0x40;
     };
 
     RequestResponseFrame() {
@@ -58,7 +60,9 @@ public:
     }
 
     bool valid() const {
-        return _data[Constants::OFFSET_BYTE_START] == Constants::VALUE_BYTE_START && _data[Constants::OFFSET_ADDRESS] != Constants::VALUE_ADDRESS_SLAVE && _data[Constants::OFFSET_SIZE] == Constants::SIZE_DATA && _data[Constants::OFFSET_CHECKSUM] == calculateChecksum();
+        return _data[Constants::OFFSET_BYTE_START] == Constants::VALUE_BYTE_START && 
+        _data[Constants::OFFSET_ADDRESS] == Constants::VALUE_ADDRESS_BMS_MASTER && 
+        _data[Constants::OFFSET_SIZE] == Constants::SIZE_DATA && _data[Constants::OFFSET_CHECKSUM] == calculateChecksum();
     }
 
     //
@@ -141,7 +145,7 @@ private:
 class RequestResponse_Builder {
 public:
     RequestResponse_Builder() {
-        _request.setAddress(RequestResponseFrame::Constants::VALUE_ADDRESS_HOST);
+        _request.setAddress(RequestResponseFrame::Constants::VALUE_ADDRESS_UPPER_COMPUTER);
     }
     RequestResponse_Builder& setCommand(const uint8_t cmd) {
         _request.setCommand(cmd);
@@ -175,26 +179,32 @@ public:
         return _request.getCommand();
     }
     bool isValid() const {
-        return _valid > 0;
+        return _validState;
     }
     time_t valid() const {
-        return _valid;
+        return _validTime;
     }
     virtual bool isRequestable() const {
         return true;
+    }
+    bool isComplete() const {
+        return (_responsesReceived == _responsesExpected);
     }
     virtual RequestResponseFrame prepareRequest() {
         _responsesReceived = 0;
         return _request;
     }
     bool processResponse(const RequestResponseFrame& frame) {
-        if (_responsesReceived++ < _responsesExpected && frame.getUInt8(0) == _responsesReceived)
+        _validState = false;
+        ++_responsesReceived;
+        DEBUG_PRINTF ("process_response: %d/%d\n", _responsesReceived, _responsesExpected);
+        if (_responsesReceived <= _responsesExpected && (_responsesExpected == 1 || frame.getUInt8(0) == _responsesReceived))
             return processResponseFrame(frame, _responsesReceived);
         else return false;
     }
 protected:
     bool setValid(const bool v = true) {
-        _valid = v ? timestamp () : 0;
+        if ((_validState = v)) _validTime = timestamp ();
         _responsesReceived = 0;
         return v;
     }
@@ -205,7 +215,8 @@ protected:
         _responsesExpected = count;
     }
 private:
-    time_t _valid{};
+    bool _validState{};
+    time_t _validTime{};
     RequestResponseFrame _request{};
     size_t _responsesExpected{}, _responsesReceived{};
 };

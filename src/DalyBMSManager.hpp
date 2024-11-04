@@ -48,15 +48,16 @@ private:
             : config(conf), hardware(config.serialId), connector(hardware), interface(config.daly, connector) {
             hardware.setRxBufferSize(config.serialBuffer);
             hardware.begin(config.serialBaud, SERIAL_8N1, config.serialRxPin, config.serialTxPin);
-            if (config.enPin >= 0)
-                digitalWrite(config.enPin, HIGH);
+            enable (true);
             interface.begin();
         }
         ~Instance() {
             hardware.flush();
-            if (config.enPin >= 0)
-                digitalWrite(config.enPin, LOW);
+            enable (false);
             hardware.end();
+        }
+        void enable (bool enabled) {
+            if (config.enPin >= 0) digitalWrite(config.enPin, enabled ? LOW : HIGH); // Active-LOW
         }
     };
 
@@ -93,8 +94,11 @@ public:
 
     //
 
-    void loop() {
-        forEachInterface<&Interface::loop>();
+    void enable(bool enabled) {
+        for (auto& instance : instances) instance->enable (enabled);
+    }
+    void process() {
+        forEachInterface<&Interface::process>();
     }
     void requestStatus() {
         forEachInterface<&Interface::requestStatus>();

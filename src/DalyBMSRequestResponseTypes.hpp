@@ -78,6 +78,18 @@ struct FrameTypeDateYMD {
         return String("20") + (year < 10 ? "0" : "") + String(year) + (month < 10 ? "0" : "") + String(month) + (day < 10 ? "0" : "") + String(day);
     }
 };
+struct FrameTypeDateHMS {
+    uint8_t hours{}, minutes{}, seconds{};
+    String toString() const {
+        return (hours < 10 ? "0" : "") + String(hours) + (minutes < 10 ? "0" : "") + String(minutes) + (seconds < 10 ? "0" : "") + String(seconds);
+    }
+};
+String toString (const FrameTypeDateYMD& date, const FrameTypeDateHMS& time) {
+    return String("20") + (date.year < 10 ? "0" : "") + String(date.year) + (date.month < 10 ? "/0" : "/") + String(date.month) + (date.day < 10 ? "/0" : "/") + String(date.day) +
+        String ('T') +
+        (time.hours < 10 ? "0" : "") + String(time.hours) + (time.minutes < 10 ? ":0" : ":") + String(time.minutes) + (time.seconds < 10 ? ":0" : ":") + String(time.seconds);
+}
+
 template<typename TYPE>
 struct FrameTypeMinmax {
     TYPE min{}, max{};
@@ -118,7 +130,7 @@ public:
         return true;
     }
     static bool decode_BitNoFrameNum(const RequestResponseFrame& frame, size_t offset, uint8_t* value) {
-        *value = frame.getBit(offset - 1);    // will be offset by 1 due to assumed frame num
+        *value = frame.getBit(offset);
         return true;
     }
 
@@ -135,6 +147,10 @@ public:
     }
     static bool decode(const RequestResponseFrame& frame, size_t offset, FrameTypeDateYMD* value) {
         *value = { .year = frame.getUInt8(offset + 0), .month = frame.getUInt8(offset + 1), .day = frame.getUInt8(offset + 2) };
+        return true;
+    }
+    static bool decode(const RequestResponseFrame& frame, size_t offset, FrameTypeDateHMS* value) {
+        *value = { .hours = frame.getUInt8(offset + 0), .minutes = frame.getUInt8(offset + 1), .seconds = frame.getUInt8(offset + 2) };
         return true;
     }
     static bool decode(const RequestResponseFrame& frame, size_t offset, bool* value) {
@@ -176,7 +192,7 @@ protected:
     }
 };
 
-class RequestResponse_BMS_HARDWARE_CONFIG : public RequestResponseCommand<0x51> {
+class RequestResponse_BMS_CONFIG : public RequestResponseCommand<0x51> {
 public:
     uint8_t boards{};
     std::array<uint8_t, 3> cells{};
@@ -213,7 +229,7 @@ protected:
     }
 };
 
-using RequestResponse_BMS_FIRMWARE_INDEX = RequestResponse_TYPE_STRING<0x54, 1>;
+using RequestResponse_BMS_FIRMWARE = RequestResponse_TYPE_STRING<0x54, 1>;
 
 using RequestResponse_BATTERY_CODE = RequestResponse_TYPE_STRING<0x57, 5>;
 
@@ -232,11 +248,11 @@ protected:
     }
 };
 
-using RequestResponse_CELL_VOLTAGES_THRESHOLDS = RequestResponse_TYPE_THRESHOLD_MINMAX<0x59, float, 2, FrameContentDecoder::decode_Voltage_m>;
-using RequestResponse_PACK_VOLTAGES_THRESHOLDS = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5A, float, 2, FrameContentDecoder::decode_Voltage_d>;
-using RequestResponse_PACK_CURRENTS_THRESHOLDS = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5B, float, 2, FrameContentDecoder::decode_Current_d>;
+using RequestResponse_THRESHOLDS_CELL_VOLTAGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x59, float, 2, FrameContentDecoder::decode_Voltage_m>;
+using RequestResponse_THRESHOLDS_VOLTAGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5A, float, 2, FrameContentDecoder::decode_Voltage_d>;
+using RequestResponse_THRESHOLDS_CURRENT = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5B, float, 2, FrameContentDecoder::decode_Current_d>;
 
-class RequestResponse_PACK_TEMPERATURE_THRESHOLDS : public RequestResponseCommand<0x5C> {
+class RequestResponse_THRESHOLDS_SENSOR : public RequestResponseCommand<0x5C> {
 public:
     FrameTypeThresholdsMinmax<int8_t> charge{}, discharge{};
 protected:
@@ -253,9 +269,9 @@ protected:
     }
 };
 
-using RequestResponse_PACK_SOC_THRESHOLDS = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5D, float, 2, FrameContentDecoder::decode_Percent_d>;
+using RequestResponse_THRESHOLDS_CHARGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5D, float, 2, FrameContentDecoder::decode_Percent_d>;
 
-class RequestResponse_CELL_SENSORS_THRESHOLDS : public RequestResponseCommand<0x5E> {
+class RequestResponse_THRESHOLDS_CELL_SENSOR : public RequestResponseCommand<0x5E> {
 public:
     FrameTypeThresholdsDifference<float> voltage{};
     FrameTypeThresholdsDifference<int8_t> temperature{};
@@ -267,7 +283,7 @@ protected:
     }
 };
 
-class RequestResponse_CELL_BALANCES_THRESHOLDS : public RequestResponseCommand<0x5F> {
+class RequestResponse_THRESHOLDS_CELL_BALANCE : public RequestResponseCommand<0x5F> {
 public:
     float voltageEnableThreshold{};
     float voltageAcceptableDifference{};
@@ -278,7 +294,7 @@ protected:
     }
 };
 
-class RequestResponse_PACK_SHORTCIRCUIT_THRESHOLDS : public RequestResponseCommand<0x60> {
+class RequestResponse_THRESHOLDS_SHORTCIRCUIT : public RequestResponseCommand<0x60> {
 public:
     float currentShutdownA{};
     float currentSamplingR{};
@@ -294,31 +310,34 @@ protected:
 
 class RequestResponse_BMS_RTC : public RequestResponseCommand<0x61> {    // XXX TBC
 public:
-    uint32_t dateTime1{}, dateTime2{};
+    FrameTypeDateYMD date{};
+    FrameTypeDateHMS time{};
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
-        dateTime1 = frame.getUInt32(0);    // XXX ??
-        dateTime2 = frame.getUInt32(4);    // XXX ??
-        return setValid();
+        return setValid(
+            FrameContentDecoder::decode(frame, 0, &date) && FrameContentDecoder::decode(frame, 3, &time));
     }
 };
 
-using RequestResponse_BMS_SOFTWARE_VERSION = RequestResponse_TYPE_STRING<0x62, 2>;
+using RequestResponse_BMS_SOFTWARE = RequestResponse_TYPE_STRING<0x62, 2>;
 
-using RequestResponse_BMS_HARDWARE_VERSION = RequestResponse_TYPE_STRING<0x63, 2>;
+using RequestResponse_BMS_HARDWARE = RequestResponse_TYPE_STRING<0x63, 2>;
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-class RequestResponse_PACK_STATUS : public RequestResponseCommand<0x90> {
+class RequestResponse_STATUS : public RequestResponseCommand<0x90> {
 public:
     float voltage{};
     float current{};
     float charge{};
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
+        DEBUG_PRINTF ("pack_status\n");
         return setValid(
-            FrameContentDecoder::decode_Voltage_d(frame, 0, &voltage) && FrameContentDecoder::decode_Current_d(frame, 4, &current) && FrameContentDecoder::decode_Percent_d(frame, 6, &charge));
+            FrameContentDecoder::decode_Voltage_d(frame, 0, &voltage) && 
+            FrameContentDecoder::decode_Current_d(frame, 4, &current) && 
+            FrameContentDecoder::decode_Percent_d(frame, 6, &charge));
     }
 };
 
@@ -338,9 +357,9 @@ protected:
     }
 };
 
-using RequestResponse_CELL_VOLTAGES_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x91, float, 2, FrameContentDecoder::decode_Voltage_m>;
+using RequestResponse_VOLTAGE_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x91, float, 2, FrameContentDecoder::decode_Voltage_m>;
 
-using RequestResponse_CELL_TEMPERATURES_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 1, FrameContentDecoder::decode_Temperature>;
+using RequestResponse_SENSOR_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 1, FrameContentDecoder::decode_Temperature>;
 
 enum class ChargeState : uint8_t { Stationary = 0x00,
                                    Charge = 0x01,
@@ -354,7 +373,7 @@ String toString(const ChargeState status) {
     }
 }
 
-class RequestResponse_MOSFET_STATUS : public RequestResponseCommand<0x93> {
+class RequestResponse_MOSFET : public RequestResponseCommand<0x93> {
 public:
     ChargeState state{};
     bool mosChargeState{};
@@ -368,7 +387,7 @@ protected:
     }
 };
 
-class RequestResponse_PACK_INFORMATION : public RequestResponseCommand<0x94> {
+class RequestResponse_INFORMATION : public RequestResponseCommand<0x94> {
 public:
     uint8_t numberOfCells{};
     uint8_t numberOfSensors{};
@@ -383,7 +402,7 @@ protected:
     }
 };
 
-template<uint8_t COMMAND, typename TYPE, int SIZE, size_t ITEMS_MAX, size_t ITEMS_PER_FRAME, auto DECODER>
+template<uint8_t COMMAND, typename TYPE, int SIZE, size_t ITEMS_MAX, size_t ITEMS_PER_FRAME, bool FRAMENUM, auto DECODER>
 class RequestResponse_TYPE_ARRAY : public RequestResponseCommand<COMMAND> {
 public:
     std::vector<TYPE> values{};
@@ -402,9 +421,11 @@ protected:
     using RequestResponseCommand<COMMAND>::setValid;
     using RequestResponseCommand<COMMAND>::setResponseFrameCount;
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t frameNum) override {
-        if (frame.getUInt8(0) != frameNum || frame.getUInt8(0) > (values.size() / ITEMS_PER_FRAME)) return false;
-        for (size_t i = 0; i < ITEMS_PER_FRAME && ((frameNum * ITEMS_PER_FRAME) + i) < values.size(); i++)
-            if (!DECODER(frame, 1 + i * SIZE, &values[(frameNum * ITEMS_PER_FRAME) + i]))
+        DEBUG_PRINTF ("frame_num=%d, frame_idx=%d, values_size=%d, ITEMS_PER_FRAME=%d\n", frameNum, frame.getUInt8(0), values.size (), ITEMS_PER_FRAME);
+        if (FRAMENUM && (frame.getUInt8(0) != frameNum || frame.getUInt8(0) > (values.size() / ITEMS_PER_FRAME) + 1)) return false;
+        DEBUG_PRINTF ("process frame=%d\n", frameNum);
+        for (size_t i = 0; i < ITEMS_PER_FRAME && (((frameNum - 1) * ITEMS_PER_FRAME) + i) < values.size(); i++)
+            if (!DECODER(frame, (FRAMENUM ? 1 : 0) + i * SIZE, &values[((frameNum - 1) * ITEMS_PER_FRAME) + i]))
                 return setValid (false); // will block remaining frames
         if (frameNum == (values.size() / ITEMS_PER_FRAME) + 1)
             return setValid();
@@ -412,13 +433,13 @@ protected:
     }
 };
 
-using RequestResponse_CELL_VOLTAGES = RequestResponse_TYPE_ARRAY<0x95, float, 2, 48, 3, FrameContentDecoder::decode_Voltage_m>;
+using RequestResponse_VOLTAGES = RequestResponse_TYPE_ARRAY<0x95, float, 2, 48, 3, true, FrameContentDecoder::decode_Voltage_m>;
 
-using RequestResponse_CELL_TEMPERATURES = RequestResponse_TYPE_ARRAY<0x96, int8_t, 1, 16, 7, FrameContentDecoder::decode_Temperature>;
+using RequestResponse_SENSORS = RequestResponse_TYPE_ARRAY<0x96, int8_t, 1, 16, 7, true, FrameContentDecoder::decode_Temperature>;
 
-using RequestResponse_CELL_BALANCES = RequestResponse_TYPE_ARRAY<0x97, uint8_t, 1, 48, 48, FrameContentDecoder::decode_BitNoFrameNum>;
+using RequestResponse_BALANCES = RequestResponse_TYPE_ARRAY<0x97, uint8_t, 1, 48, 48, false, FrameContentDecoder::decode_BitNoFrameNum>;
 
-class RequestResponse_FAILURE_STATUS : public RequestResponseCommand<0x98> {
+class RequestResponse_FAILURE : public RequestResponseCommand<0x98> {
     static constexpr size_t NUM_FAILURE_BYTES = 7;
     static constexpr size_t NUM_FAILURE_CODES = NUM_FAILURE_BYTES * 8;
 public:
@@ -466,7 +487,7 @@ public:
     }
 };
 
-using RequestResponse_BMS_RESET = RequestResponseCommand<0x00>;
+using RequestResponse_RESET = RequestResponseCommand<0x00>;
 
 using RequestResponse_MOSFET_DISCHARGE = RequestResponse_TYPE_ONOFF<0xD9>;
 

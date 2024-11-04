@@ -18,32 +18,32 @@ namespace daly_bms {
 
 template<typename TYPE> struct TypeName { static constexpr const char* name = "unknown"; };
 #define TYPE_NAME(TYPE,NAME) template<> struct TypeName<TYPE> { static constexpr const char* name = NAME; }
-TYPE_NAME(RequestResponse_BMS_HARDWARE_CONFIG,"hardware_config");
-TYPE_NAME(RequestResponse_BMS_HARDWARE_VERSION,"hardware_version");
-TYPE_NAME(RequestResponse_BMS_FIRMWARE_INDEX,"firmware_index");
-TYPE_NAME(RequestResponse_BMS_SOFTWARE_VERSION,"software_version");
+TYPE_NAME(RequestResponse_BMS_CONFIG,"config");
+TYPE_NAME(RequestResponse_BMS_HARDWARE,"hardware");
+TYPE_NAME(RequestResponse_BMS_FIRMWARE,"firmware");
+TYPE_NAME(RequestResponse_BMS_SOFTWARE,"software");
 TYPE_NAME(RequestResponse_BATTERY_RATINGS,"battery_ratings");
 TYPE_NAME(RequestResponse_BATTERY_CODE,"battery_code");
 TYPE_NAME(RequestResponse_BATTERY_INFO,"battery_info");
 TYPE_NAME(RequestResponse_BATTERY_STAT,"battery_stat");
 TYPE_NAME(RequestResponse_BMS_RTC,"rtc");
-TYPE_NAME(RequestResponse_PACK_VOLTAGES_THRESHOLDS,"pack_voltages");
-TYPE_NAME(RequestResponse_PACK_CURRENTS_THRESHOLDS,"pack_currents");
-TYPE_NAME(RequestResponse_PACK_TEMPERATURE_THRESHOLDS,"pack_temperatures");
-TYPE_NAME(RequestResponse_PACK_SOC_THRESHOLDS,"pack_soc");
-TYPE_NAME(RequestResponse_CELL_VOLTAGES_THRESHOLDS,"cell_voltages");
-TYPE_NAME(RequestResponse_CELL_SENSORS_THRESHOLDS,"cell_sensors");
-TYPE_NAME(RequestResponse_CELL_BALANCES_THRESHOLDS,"cell_balances");
-TYPE_NAME(RequestResponse_PACK_SHORTCIRCUIT_THRESHOLDS,"pack_shortcircuit");
-TYPE_NAME(RequestResponse_PACK_STATUS,"pack");
-TYPE_NAME(RequestResponse_CELL_VOLTAGES_MINMAX,"cell_voltages");
-TYPE_NAME(RequestResponse_CELL_TEMPERATURES_MINMAX,"cell_temperatures");
-TYPE_NAME(RequestResponse_MOSFET_STATUS,"fets");
-TYPE_NAME(RequestResponse_PACK_INFORMATION,"info");
-TYPE_NAME(RequestResponse_FAILURE_STATUS,"failures");
-TYPE_NAME(RequestResponse_CELL_VOLTAGES,"voltages");
-TYPE_NAME(RequestResponse_CELL_TEMPERATURES,"temperatures");
-TYPE_NAME(RequestResponse_CELL_BALANCES,"balances");
+TYPE_NAME(RequestResponse_THRESHOLDS_VOLTAGE,"voltage");
+TYPE_NAME(RequestResponse_THRESHOLDS_CURRENT,"current");
+TYPE_NAME(RequestResponse_THRESHOLDS_SENSOR,"sensor");
+TYPE_NAME(RequestResponse_THRESHOLDS_CHARGE,"charge");
+TYPE_NAME(RequestResponse_THRESHOLDS_SHORTCIRCUIT,"shortcircuit");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_VOLTAGE,"cell_voltage");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_SENSOR,"cell_sensor");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_BALANCE,"cell_balance");
+TYPE_NAME(RequestResponse_STATUS,"status");
+TYPE_NAME(RequestResponse_VOLTAGE_MINMAX,"voltage");
+TYPE_NAME(RequestResponse_SENSOR_MINMAX,"sensor");
+TYPE_NAME(RequestResponse_MOSFET,"mosfet");
+TYPE_NAME(RequestResponse_INFORMATION,"info");
+TYPE_NAME(RequestResponse_FAILURE,"failure");
+TYPE_NAME(RequestResponse_VOLTAGES,"voltages");
+TYPE_NAME(RequestResponse_SENSORS,"sensors");
+TYPE_NAME(RequestResponse_BALANCES,"balances");
 template<typename TYPE> constexpr const char* getName(const TYPE&) {
     return TypeName<TYPE>::name;
 }
@@ -98,8 +98,8 @@ bool convertToJson(const RequestResponse_TYPE_VALUE_MINMAX<COMMAND, TYPE, SIZE, 
     min["cell"] = src.cellNumber.min;
     return true;
 }
-template<uint8_t COMMAND, typename TYPE, int SIZE, size_t ITEMS_MAX, size_t ITEMS_PER_FRAME, auto DECODER>
-bool convertToJson(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_MAX, ITEMS_PER_FRAME, DECODER>& src, JsonVariant dst) {
+template<uint8_t COMMAND, typename TYPE, int SIZE, size_t ITEMS_MAX, size_t ITEMS_PER_FRAME, bool FRAMENUM, auto DECODER>
+bool convertToJson(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_MAX, ITEMS_PER_FRAME, FRAMENUM, DECODER>& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     // JsonArray values = dst["values"].to<JsonArray>();
     JsonArray values;
@@ -109,7 +109,7 @@ bool convertToJson(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_M
     return true;
 }
 //
-bool convertToJson(const RequestResponse_BMS_HARDWARE_CONFIG& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_BMS_CONFIG& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["boards"] = src.boards;
     JsonArray cells = dst["cells"].to<JsonArray>();
@@ -140,11 +140,10 @@ bool convertToJson(const RequestResponse_BATTERY_STAT& src, JsonVariant dst) {
 }
 bool convertToJson(const RequestResponse_BMS_RTC& src, JsonVariant dst) {
     if (!src.isValid()) return false;
-    dst["dateTime1"] = src.dateTime1;
-    dst["dateTime2"] = src.dateTime2;
+    dst.set (toString (src.date, src.time));
     return true;
 }
-bool convertToJson(const RequestResponse_PACK_TEMPERATURE_THRESHOLDS& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_THRESHOLDS_SENSOR& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst ["charge"] = src.charge;
     dst ["discharge"] = src.discharge;
@@ -160,32 +159,32 @@ bool convertToJson(const RequestResponse_PACK_TEMPERATURE_THRESHOLDS& src, JsonV
     // discharge["minL2"] = src.dischargeMinL2;
     return true;
 }
-bool convertToJson(const RequestResponse_CELL_SENSORS_THRESHOLDS& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_THRESHOLDS_CELL_SENSOR& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst ["voltageDiff"] = src.voltage;
     dst ["temperatureDiff"] = src.temperature;
     return true;
 }
-bool convertToJson(const RequestResponse_CELL_BALANCES_THRESHOLDS& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_THRESHOLDS_CELL_BALANCE& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["voltageEnableThreshold"] = src.voltageEnableThreshold;
     dst["voltageAcceptableDifferential"] = src.voltageAcceptableDifference;
     return true;
 }
-bool convertToJson(const RequestResponse_PACK_SHORTCIRCUIT_THRESHOLDS& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_THRESHOLDS_SHORTCIRCUIT& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["currentShutdownA"] = src.currentShutdownA;
     dst["currentSamplingR"] = src.currentSamplingR;
     return true;
 }
-bool convertToJson(const RequestResponse_PACK_STATUS& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_STATUS& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["voltage"] = src.voltage;
     dst["current"] = src.current;
     dst["charge"] = src.charge;
     return true;
 }
-bool convertToJson(const RequestResponse_MOSFET_STATUS& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_MOSFET& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["state"] = toString(src.state);
     dst["mosChargeState"] = src.mosChargeState;
@@ -194,7 +193,7 @@ bool convertToJson(const RequestResponse_MOSFET_STATUS& src, JsonVariant dst) {
     dst["residualCapacityAh"] = src.residualCapacityAh;
     return true;
 }
-bool convertToJson(const RequestResponse_PACK_INFORMATION& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_INFORMATION& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["cells"] = src.numberOfCells;
     dst["sensors"] = src.numberOfSensors;
@@ -206,7 +205,7 @@ bool convertToJson(const RequestResponse_PACK_INFORMATION& src, JsonVariant dst)
     dst["cycles"] = src.cycles;
     return true;
 }
-bool convertToJson(const RequestResponse_FAILURE_STATUS& src, JsonVariant dst) {
+bool convertToJson(const RequestResponse_FAILURE& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["show"] = src.show;
     dst["count"] = src.count;
@@ -277,8 +276,8 @@ void debugDump(const RequestResponse_TYPE_VALUE_MINMAX<COMMAND, TYPE, SIZE, DECO
                  src.cellNumber.min);
 }
 
-template<uint8_t COMMAND, typename TYPE, int SIZE, size_t ITEMS_MAX, size_t ITEMS_PER_FRAME, auto DECODER>
-void debugDump(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_MAX, ITEMS_PER_FRAME, DECODER>& src) {
+template<uint8_t COMMAND, typename TYPE, int SIZE, size_t ITEMS_MAX, size_t ITEMS_PER_FRAME, bool FRAMENUM, auto DECODER>
+void debugDump(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_MAX, ITEMS_PER_FRAME, FRAMENUM, DECODER>& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("%u /", src.values.size());
     for (const auto& v : src.values)
@@ -286,7 +285,7 @@ void debugDump(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_MAX, 
     DEBUG_PRINTF("\n");
 }
 //
-void debugDump(const RequestResponse_BMS_HARDWARE_CONFIG& src) {
+void debugDump(const RequestResponse_BMS_CONFIG& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("boards=%d, cells=%d,%d,%d, sensors=%d,%d,%d\n",
                  src.boards,
@@ -311,7 +310,7 @@ void debugDump(const RequestResponse_BATTERY_INFO& src) {
                  src.automaticSleepSec,
                  src.unknown1, src.unknown2);
 }
-void debugDump(const RequestResponse_PACK_TEMPERATURE_THRESHOLDS& src) {
+void debugDump(const RequestResponse_THRESHOLDS_SENSOR& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("charge max L1=%dC,L2=%dC min L1=%dC,L2=%dC, discharge max L1=%dC,L2=%dC min L1=%dC,L2=%dC\n",
                  src.charge.L1.max, src.charge.L2.max,
@@ -319,33 +318,33 @@ void debugDump(const RequestResponse_PACK_TEMPERATURE_THRESHOLDS& src) {
                  src.discharge.L1.max, src.discharge.L2.max,
                  src.discharge.L1.min, src.discharge.L2.min);
 }
-void debugDump(const RequestResponse_CELL_SENSORS_THRESHOLDS& src) {
+void debugDump(const RequestResponse_THRESHOLDS_CELL_SENSOR& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("voltage diff L1=%.3fV,L2=%.3fV, temperature diff L1=%dC,L2=%dC\n",
                  src.voltage.L1, src.voltage.L2,
                  src.temperature.L1, src.temperature.L2);
 }
-void debugDump(const RequestResponse_CELL_BALANCES_THRESHOLDS& src) {
+void debugDump(const RequestResponse_THRESHOLDS_CELL_BALANCE& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("voltage enable=%.3fV, acceptable=%.3fV\n",
                  src.voltageEnableThreshold,
                  src.voltageAcceptableDifference);
 }
-void debugDump(const RequestResponse_PACK_SHORTCIRCUIT_THRESHOLDS& src) {
+void debugDump(const RequestResponse_THRESHOLDS_SHORTCIRCUIT& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("shutdown=%.1fA, sampling=%.3fR\n",
                  src.currentShutdownA, src.currentSamplingR);
 }
 void debugDump(const RequestResponse_BMS_RTC& src) {
     if (!src.isValid()) return;
-    DEBUG_PRINTF("dt1=%u, dt2=%u\n", src.dateTime1, src.dateTime2);
+    DEBUG_PRINTF("%s\n", toString (src.date, src.time).c_str ());
 }
-void debugDump(const RequestResponse_PACK_STATUS& src) {
+void debugDump(const RequestResponse_STATUS& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("%.1f volts, %.1f amps, %.1f percent\n",
                  src.voltage, src.current, src.charge);
 }
-void debugDump(const RequestResponse_MOSFET_STATUS& src) {
+void debugDump(const RequestResponse_MOSFET& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("state=%s, MOS charge=%s, discharge=%s, cycle=%d, capacity=%.1fAh\n",
                  toString(src.state).c_str(),
@@ -354,7 +353,7 @@ void debugDump(const RequestResponse_MOSFET_STATUS& src) {
                  src.bmsLifeCycle,
                  src.residualCapacityAh);
 }
-void debugDump(const RequestResponse_PACK_INFORMATION& src) {
+void debugDump(const RequestResponse_INFORMATION& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("cells=%d, sensors=%d, charger=%s, load=%s, cycles=%d\n",
                  src.numberOfCells, src.numberOfSensors,
@@ -362,7 +361,7 @@ void debugDump(const RequestResponse_PACK_INFORMATION& src) {
                  src.loadStatus ? "on" : "off",
                  src.cycles);
 }
-void debugDump(const RequestResponse_FAILURE_STATUS& src) {
+void debugDump(const RequestResponse_FAILURE& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("show=%s, count=%d", src.show ? "yes" : "no", src.count);
     if (src.count > 0) {
@@ -394,10 +393,10 @@ bool convertToJson(const Interface& src, JsonVariant dst) {
     convertConfig(src.getConfig ());
     if (src.isEnabled(Categories::Information)) {
         auto information = convertCategory(src.getConfig (), Categories::Information);
-        convertElement(information, src.information.hardware_config);
-        convertElement(information, src.information.hardware_version);
-        convertElement(information, src.information.firmware_index);
-        convertElement(information, src.information.software_version);
+        convertElement(information, src.information.config);
+        convertElement(information, src.information.hardware);
+        convertElement(information, src.information.firmware);
+        convertElement(information, src.information.software);
         convertElement(information, src.information.battery_ratings);
         convertElement(information, src.information.battery_code);
         convertElement(information, src.information.battery_info);
@@ -406,28 +405,28 @@ bool convertToJson(const Interface& src, JsonVariant dst) {
     }
     if (src.isEnabled(Categories::Thresholds)) {
         auto thresholds = convertCategory(src.getConfig (), Categories::Thresholds);
-        convertElement(thresholds, src.thresholds.pack_voltages);
-        convertElement(thresholds, src.thresholds.pack_currents);
-        convertElement(thresholds, src.thresholds.pack_temperatures);
-        convertElement(thresholds, src.thresholds.pack_soc);
-        convertElement(thresholds, src.thresholds.cell_voltages);
-        convertElement(thresholds, src.thresholds.cell_sensors);
-        convertElement(thresholds, src.thresholds.cell_balances);
-        convertElement(thresholds, src.thresholds.pack_shortcircuit);
+        convertElement(thresholds, src.thresholds.voltage);
+        convertElement(thresholds, src.thresholds.current);
+        convertElement(thresholds, src.thresholds.sensor);
+        convertElement(thresholds, src.thresholds.charge);
+        convertElement(thresholds, src.thresholds.cell_voltage);
+        convertElement(thresholds, src.thresholds.cell_sensor);
+        convertElement(thresholds, src.thresholds.cell_balance);
+        convertElement(thresholds, src.thresholds.shortcircuit);
     }
     if (src.isEnabled(Categories::Status)) {
         auto status = convertCategory(src.getConfig (), Categories::Status);
-        convertElement(status, src.status.pack);
-        convertElement(status, src.status.cell_voltages);
-        convertElement(status, src.status.cell_temperatures);
-        convertElement(status, src.status.fets);
-        convertElement(status, src.status.info);
-        convertElement(status, src.status.failures);
+        convertElement(status, src.status.status);
+        convertElement(status, src.status.voltage);
+        convertElement(status, src.status.sensor);
+        convertElement(status, src.status.mosfet);
+        convertElement(status, src.status.information);
+        convertElement(status, src.status.failure);
     }
     if (src.isEnabled(Categories::Diagnostics)) {
         auto diagnostics = convertCategory(src.getConfig (), Categories::Diagnostics);
         convertElement(diagnostics, src.diagnostics.voltages);
-        convertElement(diagnostics, src.diagnostics.temperatures);
+        convertElement(diagnostics, src.diagnostics.sensors);
         convertElement(diagnostics, src.diagnostics.balances);
     }
     return true;
@@ -457,10 +456,10 @@ void dumpDebug(const Interface& src) {
     convertConfig(src.getConfig ());
     if (src.isEnabled(Categories::Information)) {
         auto information = convertCategory(src.getConfig (), Categories::Information);
-        convertElement(information, src.information.hardware_config);
-        convertElement(information, src.information.hardware_version);
-        convertElement(information, src.information.firmware_index);
-        convertElement(information, src.information.software_version);
+        convertElement(information, src.information.config);
+        convertElement(information, src.information.hardware);
+        convertElement(information, src.information.firmware);
+        convertElement(information, src.information.software);
         convertElement(information, src.information.battery_ratings);
         convertElement(information, src.information.battery_code);
         convertElement(information, src.information.battery_info);
@@ -469,28 +468,28 @@ void dumpDebug(const Interface& src) {
     }
     if (src.isEnabled(Categories::Thresholds)) {
         auto thresholds = convertCategory(src.getConfig (), Categories::Thresholds);
-        convertElement(thresholds, src.thresholds.pack_voltages);
-        convertElement(thresholds, src.thresholds.pack_currents);
-        convertElement(thresholds, src.thresholds.pack_temperatures);
-        convertElement(thresholds, src.thresholds.pack_soc);
-        convertElement(thresholds, src.thresholds.cell_voltages);
-        convertElement(thresholds, src.thresholds.cell_sensors);
-        convertElement(thresholds, src.thresholds.cell_balances);
-        convertElement(thresholds, src.thresholds.pack_shortcircuit);
+        convertElement(thresholds, src.thresholds.voltage);
+        convertElement(thresholds, src.thresholds.current);
+        convertElement(thresholds, src.thresholds.sensor);
+        convertElement(thresholds, src.thresholds.charge);
+        convertElement(thresholds, src.thresholds.cell_voltage);
+        convertElement(thresholds, src.thresholds.cell_sensor);
+        convertElement(thresholds, src.thresholds.cell_balance);
+        convertElement(thresholds, src.thresholds.shortcircuit);
     }
     if (src.isEnabled(Categories::Status)) {
         auto status = convertCategory(src.getConfig (), Categories::Status);
-        convertElement(status, src.status.pack);
-        convertElement(status, src.status.cell_voltages);
-        convertElement(status, src.status.cell_temperatures);
-        convertElement(status, src.status.fets);
-        convertElement(status, src.status.info);
-        convertElement(status, src.status.failures);
+        convertElement(status, src.status.status);
+        convertElement(status, src.status.voltage);
+        convertElement(status, src.status.sensor);
+        convertElement(status, src.status.mosfet);
+        convertElement(status, src.status.information);
+        convertElement(status, src.status.failure);
     }
     if (src.isEnabled(Categories::Diagnostics)) {
         auto diagnostics = convertCategory(src.getConfig (), Categories::Diagnostics);
         convertElement(diagnostics, src.diagnostics.voltages);
-        convertElement(diagnostics, src.diagnostics.temperatures);
+        convertElement(diagnostics, src.diagnostics.sensors);
         convertElement(diagnostics, src.diagnostics.balances);
     }
 }

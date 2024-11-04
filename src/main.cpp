@@ -48,7 +48,7 @@ static constexpr const char* BALANCE_NAME = "balance";
 
 // -----------------------------------------------------------------------------------------------
 
-void testDirect() {
+void testRaw() {
 
     const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
     HardwareSerial* serial;
@@ -60,9 +60,7 @@ void testDirect() {
         if (enPin >= 0) digitalWrite(enPin, HIGH);
 
         while (1) {
-            // uint8_t command [13] = { 0xA5, 0x40, 0xD9, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06 };
-            //uint8_t command [13] = { 0xA5, 0x40 , 0x90 , 0x08 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x7D };
-            uint8_t command[13] = { 0xa5, 0x40, 0x62, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4f };
+            uint8_t command [13] = { 0xA5, 0x40 , 0x90 , 0x08 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x7D };
             serial->write(command, 13);
             while (serial->available() > 0) {
                 uint8_t byte = serial->read();
@@ -73,7 +71,41 @@ void testDirect() {
         }
     });
 }
+void testSingle () {
 
+    // const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
+    // daly_bms::Config config = { .id = "manager", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
+
+    const int serialId = BALANCE_ID, serialRxPin = BALANCE_PIN_RX, serialTxPin = BALANCE_PIN_TX, enPin = BALANCE_PIN_EN;
+    daly_bms::Config config = { .id = "balance", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
+
+    HardwareSerial serial (serialId);
+    serial.setRxBufferSize(1024);
+    serial.begin(9600, SERIAL_8N1, serialRxPin, serialTxPin);
+    daly_bms::HardwareSerialConnector connector (serial);
+    daly_bms::Interface interface (config, connector);
+    interface.begin ();
+
+    while (1) {
+        auto& request = interface.information.rtc;
+        // interface.issue (interface.status.info); // required to capture numbers for diagnostics request/responses
+        interface.issue (request);
+        delay (5000);
+        interface.process ();
+        if (request.isValid ()) {
+            DEBUG_PRINTF ("---> \n");
+            daly_bms::debugDump (request);
+            DEBUG_PRINTF ("<--- \n");
+        }
+        DEBUG_PRINTF (".\n");
+    }
+}
+
+/* manager ...
+        RequestResponse_BATTERY_INFO battery_info; // operationalMode=1, type=1, productionDate=20240612, sleep=840, unknown 1=16, 2=10
+   balance ... 
+        RequestResponse_BATTERY_INFO battery_info; // operationalMode=1, type=1, productionDate=20000101, sleep=840, unknown 1=16, 2=10
+*/
 // -----------------------------------------------------------------------------------------------
 
 Intervalable processGate(5 * 1000),
@@ -86,46 +118,49 @@ void setup() {
     delay(5 * 1000);
     DEBUG_START();
     DEBUG_PRINTF("*** SETUP\n");
-    delay(60 * 1000 * 1000);
 
-    //testDirect ();
+    // testRaw ();
+    testSingle();
 
-    DalyAggregationManager::Config* config = new DalyAggregationManager::Config({
-        .instances = {
-            { .daly = {
-                .id = MANAGER_NAME,
-                .capabilities = DalyAggregationManager::DalyCapabilities::All,
-                .categories = DalyAggregationManager::DalyCategories::All },
-                .serialId = MANAGER_ID,
-                .serialRxPin = MANAGER_PIN_RX,
-                .serialTxPin = MANAGER_PIN_TX,
-              .enPin = MANAGER_PIN_EN },
-            { .daly = { 
-                .id = BALANCE_NAME, 
-                .capabilities = DalyAggregationManager::DalyCapabilities::All, 
-                .categories = DalyAggregationManager::DalyCategories::All }, 
-                .serialId = BALANCE_ID, 
-                .serialRxPin = BALANCE_PIN_RX, 
-                .serialTxPin = BALANCE_PIN_TX, 
-                .enPin = BALANCE_PIN_EN },
-        }
-    });
-    dalyManager = new DalyAggregationManager(*config);
-    if (!dalyManager || !dalyManager->begin()) {
-        DEBUG_PRINTF("*** FAILED\n");
-        esp_deep_sleep_start();
-    }
+    // DalyAggregationManager::Config* config = new DalyAggregationManager::Config({
+    //     .instances = {
+    //         { .daly = {
+    //             .id = MANAGER_NAME,
+    //             .capabilities = DalyAggregationManager::DalyCapabilities::All,
+    //             .categories = DalyAggregationManager::DalyCategories::All },
+    //             .serialId = MANAGER_ID,
+    //             .serialRxPin = MANAGER_PIN_RX,
+    //             .serialTxPin = MANAGER_PIN_TX,
+    //           .enPin = MANAGER_PIN_EN },
+            // { .daly = { 
+            //     .id = BALANCE_NAME, 
+            //     .capabilities = DalyAggregationManager::DalyCapabilities::All, 
+            //     .categories = DalyAggregationManager::DalyCategories::All }, 
+            //     .serialId = BALANCE_ID, 
+            //     .serialRxPin = BALANCE_PIN_RX, 
+            //     .serialTxPin = BALANCE_PIN_TX, 
+            //     .enPin = BALANCE_PIN_EN },
+    //     }
+    // });
+    // dalyManager = new DalyAggregationManager(*config);
+    // if (!dalyManager || !dalyManager->begin()) {
+    //     DEBUG_PRINTF("*** FAILED\n");
+    //     esp_deep_sleep_start();
+    // }
+
+
+
 }
 
 void loop() {
-    processGate.wait();
-    daly_bms::exception_catcher([&] {
-        DEBUG_PRINTF("*** LOOP\n");
-        dalyManager->loop();
-        if (requestStatus) dalyManager->requestStatus();
-        if (requestDiagnostics) dalyManager->requestDiagnostics();
-        if (reportData) dalyManager->dumpDebug();
-    });
+    // processGate.wait();
+    // daly_bms::exception_catcher([&] {
+    //     DEBUG_PRINTF("*** LOOP\n");
+    //     dalyManager->loop();
+    //     if (requestStatus) dalyManager->requestStatus();
+    //     if (requestDiagnostics) dalyManager->requestDiagnostics();
+    //     if (reportData) dalyManager->dumpDebug();
+    // });
 }
 
 // -----------------------------------------------------------------------------------------------
