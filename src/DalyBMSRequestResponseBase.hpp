@@ -181,7 +181,7 @@ public:
     bool isValid() const {
         return _validState;
     }
-    time_t valid() const {
+    SystemTicks_t valid() const {
         return _validTime;
     }
     virtual bool isRequestable() const {
@@ -196,15 +196,16 @@ public:
     }
     bool processResponse(const RequestResponseFrame& frame) {
         _validState = false;
-        ++_responsesReceived;
-        DEBUG_PRINTF ("process_response: %d/%d\n", _responsesReceived, _responsesExpected);
-        if (_responsesReceived <= _responsesExpected && (_responsesExpected == 1 || frame.getUInt8(0) == _responsesReceived))
+        if (++ _responsesReceived <= _responsesExpected && (_responsesExpected == 1 || frame.getUInt8(0) == _responsesReceived))
             return processResponseFrame(frame, _responsesReceived);
         else return false;
     }
+    String getName () const {
+        return demangle (typeid(*this).name());
+    }
 protected:
     bool setValid(const bool v = true) {
-        if ((_validState = v)) _validTime = timestamp ();
+        if ((_validState = v)) _validTime = systemTicksNow ();
         _responsesReceived = 0;
         return v;
     }
@@ -216,7 +217,7 @@ protected:
     }
 private:
     bool _validState{};
-    time_t _validTime{};
+    SystemTicks_t _validTime{};
     RequestResponseFrame _request{};
     size_t _responsesExpected{}, _responsesReceived{};
 };

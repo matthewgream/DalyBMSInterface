@@ -215,23 +215,37 @@ protected:
     }
 };
 
+enum class OperationalMode : uint8_t { LongPressPowerOnOff = 0x01 };
+String toString(const OperationalMode operationalMode) {
+    switch (operationalMode) {
+        case OperationalMode::LongPressPowerOnOff: return "long-press power-on/off";
+        default: return String ("0x") + String (static_cast <uint8_t> (operationalMode), HEX);
+    }
+}
+enum class BatteryType : uint8_t { LithiumIon = 0x01 };
+String toString(const BatteryType batteryType) {
+    switch (batteryType) {
+        case BatteryType::LithiumIon: return "lithium-ion";
+        default: return String ("0x") + String (static_cast <uint8_t> (batteryType), HEX);
+    }
+}
 class RequestResponse_BATTERY_INFO : public RequestResponseCommand<0x53> {    // XXX TBC
 public:
-    uint8_t operationalMode{};
-    uint8_t type{};
+    OperationalMode mode{};
+    BatteryType type{};
     FrameTypeDateYMD productionDate{};
     uint16_t automaticSleepSec{};
     uint8_t unknown1{}, unknown2{};
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
         return setValid(
-            FrameContentDecoder::decode(frame, 0, &operationalMode) && FrameContentDecoder::decode(frame, 1, &type) && FrameContentDecoder::decode(frame, 2, &productionDate) && FrameContentDecoder::decode_Time_s(frame, 5, &automaticSleepSec) && FrameContentDecoder::decode(frame, 6, &unknown1) && FrameContentDecoder::decode(frame, 7, &unknown2));
+            FrameContentDecoder::decode(frame, 0, &mode) && FrameContentDecoder::decode(frame, 1, &type) && FrameContentDecoder::decode(frame, 2, &productionDate) && FrameContentDecoder::decode_Time_s(frame, 5, &automaticSleepSec) && FrameContentDecoder::decode(frame, 6, &unknown1) && FrameContentDecoder::decode(frame, 7, &unknown2));
     }
 };
 
-using RequestResponse_BMS_FIRMWARE = RequestResponse_TYPE_STRING<0x54, 1>;
+class RequestResponse_BMS_FIRMWARE: public RequestResponse_TYPE_STRING<0x54, 1> {};
 
-using RequestResponse_BATTERY_CODE = RequestResponse_TYPE_STRING<0x57, 5>;
+class RequestResponse_BATTERY_CODE: public RequestResponse_TYPE_STRING<0x57, 5> {};
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
@@ -248,9 +262,11 @@ protected:
     }
 };
 
-using RequestResponse_THRESHOLDS_CELL_VOLTAGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x59, float, 2, FrameContentDecoder::decode_Voltage_m>;
-using RequestResponse_THRESHOLDS_VOLTAGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5A, float, 2, FrameContentDecoder::decode_Voltage_d>;
-using RequestResponse_THRESHOLDS_CURRENT = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5B, float, 2, FrameContentDecoder::decode_Current_d>;
+class RequestResponse_THRESHOLDS_CELL_VOLTAGE: public RequestResponse_TYPE_THRESHOLD_MINMAX<0x59, float, 2, FrameContentDecoder::decode_Voltage_m> {};
+
+class RequestResponse_THRESHOLDS_VOLTAGE: public RequestResponse_TYPE_THRESHOLD_MINMAX<0x5A, float, 2, FrameContentDecoder::decode_Voltage_d> {};
+
+class RequestResponse_THRESHOLDS_CURRENT: public RequestResponse_TYPE_THRESHOLD_MINMAX<0x5B, float, 2, FrameContentDecoder::decode_Current_d> {};
 
 class RequestResponse_THRESHOLDS_SENSOR : public RequestResponseCommand<0x5C> {
 public:
@@ -269,7 +285,7 @@ protected:
     }
 };
 
-using RequestResponse_THRESHOLDS_CHARGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5D, float, 2, FrameContentDecoder::decode_Percent_d>;
+class RequestResponse_THRESHOLDS_CHARGE: public RequestResponse_TYPE_THRESHOLD_MINMAX<0x5D, float, 2, FrameContentDecoder::decode_Percent_d> {};
 
 class RequestResponse_THRESHOLDS_CELL_SENSOR : public RequestResponseCommand<0x5E> {
 public:
@@ -319,9 +335,9 @@ protected:
     }
 };
 
-using RequestResponse_BMS_SOFTWARE = RequestResponse_TYPE_STRING<0x62, 2>;
+class RequestResponse_BMS_SOFTWARE: public RequestResponse_TYPE_STRING<0x62, 2> {};
 
-using RequestResponse_BMS_HARDWARE = RequestResponse_TYPE_STRING<0x63, 2>;
+class RequestResponse_BMS_HARDWARE: public RequestResponse_TYPE_STRING<0x63, 2> {};
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
@@ -333,7 +349,6 @@ public:
     float charge{};
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
-        DEBUG_PRINTF ("pack_status\n");
         return setValid(
             FrameContentDecoder::decode_Voltage_d(frame, 0, &voltage) && 
             FrameContentDecoder::decode_Current_d(frame, 4, &current) && 
@@ -357,19 +372,19 @@ protected:
     }
 };
 
-using RequestResponse_VOLTAGE_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x91, float, 2, FrameContentDecoder::decode_Voltage_m>;
+class RequestResponse_VOLTAGE_MINMAX: public RequestResponse_TYPE_VALUE_MINMAX<0x91, float, 2, FrameContentDecoder::decode_Voltage_m> {};
 
-using RequestResponse_SENSOR_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 1, FrameContentDecoder::decode_Temperature>;
+class RequestResponse_SENSOR_MINMAX: public RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 1, FrameContentDecoder::decode_Temperature> {};
 
 enum class ChargeState : uint8_t { Stationary = 0x00,
                                    Charge = 0x01,
                                    Discharge = 0x02 };
-String toString(const ChargeState status) {
-    switch (status) {
+String toString(const ChargeState state) {
+    switch (state) {
         case ChargeState::Stationary: return "stationary";
         case ChargeState::Charge: return "charge";
         case ChargeState::Discharge: return "discharge";
-        default: return "unknown";
+        default: return String ("0x") + String (static_cast <uint8_t> (state), HEX);
     }
 }
 
@@ -421,9 +436,7 @@ protected:
     using RequestResponseCommand<COMMAND>::setValid;
     using RequestResponseCommand<COMMAND>::setResponseFrameCount;
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t frameNum) override {
-        DEBUG_PRINTF ("frame_num=%d, frame_idx=%d, values_size=%d, ITEMS_PER_FRAME=%d\n", frameNum, frame.getUInt8(0), values.size (), ITEMS_PER_FRAME);
         if (FRAMENUM && (frame.getUInt8(0) != frameNum || frame.getUInt8(0) > (values.size() / ITEMS_PER_FRAME) + 1)) return false;
-        DEBUG_PRINTF ("process frame=%d\n", frameNum);
         for (size_t i = 0; i < ITEMS_PER_FRAME && (((frameNum - 1) * ITEMS_PER_FRAME) + i) < values.size(); i++)
             if (!DECODER(frame, (FRAMENUM ? 1 : 0) + i * SIZE, &values[((frameNum - 1) * ITEMS_PER_FRAME) + i]))
                 return setValid (false); // will block remaining frames
@@ -433,11 +446,11 @@ protected:
     }
 };
 
-using RequestResponse_VOLTAGES = RequestResponse_TYPE_ARRAY<0x95, float, 2, 48, 3, true, FrameContentDecoder::decode_Voltage_m>;
+class RequestResponse_VOLTAGES: public RequestResponse_TYPE_ARRAY<0x95, float, 2, 48, 3, true, FrameContentDecoder::decode_Voltage_m> {};
 
-using RequestResponse_SENSORS = RequestResponse_TYPE_ARRAY<0x96, int8_t, 1, 16, 7, true, FrameContentDecoder::decode_Temperature>;
+class RequestResponse_SENSORS: public RequestResponse_TYPE_ARRAY<0x96, int8_t, 1, 16, 7, true, FrameContentDecoder::decode_Temperature> {};
 
-using RequestResponse_BALANCES = RequestResponse_TYPE_ARRAY<0x97, uint8_t, 1, 48, 48, false, FrameContentDecoder::decode_BitNoFrameNum>;
+class RequestResponse_BALANCES: public RequestResponse_TYPE_ARRAY<0x97, uint8_t, 1, 48, 48, false, FrameContentDecoder::decode_BitNoFrameNum> {};
 
 class RequestResponse_FAILURE : public RequestResponseCommand<0x98> {
     static constexpr size_t NUM_FAILURE_BYTES = 7;
@@ -487,11 +500,48 @@ public:
     }
 };
 
-using RequestResponse_RESET = RequestResponseCommand<0x00>;
+class RequestResponse_RESET: public RequestResponseCommand<0x00> {};
 
-using RequestResponse_MOSFET_DISCHARGE = RequestResponse_TYPE_ONOFF<0xD9>;
+class RequestResponse_MOSFET_DISCHARGE: public RequestResponse_TYPE_ONOFF<0xD9> {};
 
-using RequestResponse_MOSFET_CHARGE = RequestResponse_TYPE_ONOFF<0xDA>;
+class RequestResponse_MOSFET_CHARGE: public RequestResponse_TYPE_ONOFF<0xDA> {};
+
+// -----------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------
+
+#include <type_traits>
+
+template<typename TYPE> struct TypeName { static constexpr const char* name = "unknown"; };
+#define TYPE_NAME(TYPE,NAME) template<> struct TypeName<TYPE> { static constexpr const char* name = NAME; }
+TYPE_NAME(RequestResponse_BMS_CONFIG,"config");
+TYPE_NAME(RequestResponse_BMS_HARDWARE,"hardware");
+TYPE_NAME(RequestResponse_BMS_FIRMWARE,"firmware");
+TYPE_NAME(RequestResponse_BMS_SOFTWARE,"software");
+TYPE_NAME(RequestResponse_BATTERY_RATINGS,"battery_ratings");
+TYPE_NAME(RequestResponse_BATTERY_CODE,"battery_code");
+TYPE_NAME(RequestResponse_BATTERY_INFO,"battery_info");
+TYPE_NAME(RequestResponse_BATTERY_STAT,"battery_stat");
+TYPE_NAME(RequestResponse_BMS_RTC,"rtc");
+TYPE_NAME(RequestResponse_THRESHOLDS_VOLTAGE,"voltage");
+TYPE_NAME(RequestResponse_THRESHOLDS_CURRENT,"current");
+TYPE_NAME(RequestResponse_THRESHOLDS_SENSOR,"sensor");
+TYPE_NAME(RequestResponse_THRESHOLDS_CHARGE,"charge");
+TYPE_NAME(RequestResponse_THRESHOLDS_SHORTCIRCUIT,"shortcircuit");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_VOLTAGE,"cell_voltage");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_SENSOR,"cell_sensor");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_BALANCE,"cell_balance");
+TYPE_NAME(RequestResponse_STATUS,"status");
+TYPE_NAME(RequestResponse_VOLTAGE_MINMAX,"voltage");
+TYPE_NAME(RequestResponse_SENSOR_MINMAX,"sensor");
+TYPE_NAME(RequestResponse_MOSFET,"mosfet");
+TYPE_NAME(RequestResponse_INFORMATION,"info");
+TYPE_NAME(RequestResponse_FAILURE,"failure");
+TYPE_NAME(RequestResponse_VOLTAGES,"voltages");
+TYPE_NAME(RequestResponse_SENSORS,"sensors");
+TYPE_NAME(RequestResponse_BALANCES,"balances");
+template<typename TYPE> constexpr const char* getName(const TYPE&) {
+    return TypeName<TYPE>::name;
+}
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------

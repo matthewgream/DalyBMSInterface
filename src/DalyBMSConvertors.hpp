@@ -14,43 +14,6 @@ namespace daly_bms {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#include <type_traits>
-
-template<typename TYPE> struct TypeName { static constexpr const char* name = "unknown"; };
-#define TYPE_NAME(TYPE,NAME) template<> struct TypeName<TYPE> { static constexpr const char* name = NAME; }
-TYPE_NAME(RequestResponse_BMS_CONFIG,"config");
-TYPE_NAME(RequestResponse_BMS_HARDWARE,"hardware");
-TYPE_NAME(RequestResponse_BMS_FIRMWARE,"firmware");
-TYPE_NAME(RequestResponse_BMS_SOFTWARE,"software");
-TYPE_NAME(RequestResponse_BATTERY_RATINGS,"battery_ratings");
-TYPE_NAME(RequestResponse_BATTERY_CODE,"battery_code");
-TYPE_NAME(RequestResponse_BATTERY_INFO,"battery_info");
-TYPE_NAME(RequestResponse_BATTERY_STAT,"battery_stat");
-TYPE_NAME(RequestResponse_BMS_RTC,"rtc");
-TYPE_NAME(RequestResponse_THRESHOLDS_VOLTAGE,"voltage");
-TYPE_NAME(RequestResponse_THRESHOLDS_CURRENT,"current");
-TYPE_NAME(RequestResponse_THRESHOLDS_SENSOR,"sensor");
-TYPE_NAME(RequestResponse_THRESHOLDS_CHARGE,"charge");
-TYPE_NAME(RequestResponse_THRESHOLDS_SHORTCIRCUIT,"shortcircuit");
-TYPE_NAME(RequestResponse_THRESHOLDS_CELL_VOLTAGE,"cell_voltage");
-TYPE_NAME(RequestResponse_THRESHOLDS_CELL_SENSOR,"cell_sensor");
-TYPE_NAME(RequestResponse_THRESHOLDS_CELL_BALANCE,"cell_balance");
-TYPE_NAME(RequestResponse_STATUS,"status");
-TYPE_NAME(RequestResponse_VOLTAGE_MINMAX,"voltage");
-TYPE_NAME(RequestResponse_SENSOR_MINMAX,"sensor");
-TYPE_NAME(RequestResponse_MOSFET,"mosfet");
-TYPE_NAME(RequestResponse_INFORMATION,"info");
-TYPE_NAME(RequestResponse_FAILURE,"failure");
-TYPE_NAME(RequestResponse_VOLTAGES,"voltages");
-TYPE_NAME(RequestResponse_SENSORS,"sensors");
-TYPE_NAME(RequestResponse_BALANCES,"balances");
-template<typename TYPE> constexpr const char* getName(const TYPE&) {
-    return TypeName<TYPE>::name;
-}
-
-// -----------------------------------------------------------------------------------------------
-// -----------------------------------------------------------------------------------------------
-
 template<typename TYPE>
 bool convertToJson(const FrameTypeMinmax<TYPE>& src, JsonVariant dst) {
     dst["max"] = src.max;
@@ -69,6 +32,8 @@ bool convertToJson(const FrameTypeThresholdsDifference<TYPE>& src, JsonVariant d
     dst["L2"] = src.L2;
     return true;
 }
+
+// -----------------------------------------------------------------------------------------------
 
 template<uint8_t COMMAND, int LENGTH>
 bool convertToJson(const RequestResponse_TYPE_STRING<COMMAND, LENGTH>& src, JsonVariant dst) {
@@ -108,7 +73,9 @@ bool convertToJson(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_M
     dst.set(values);
     return true;
 }
-//
+
+// -----------------------------------------------------------------------------------------------
+
 bool convertToJson(const RequestResponse_BMS_CONFIG& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["boards"] = src.boards;
@@ -126,8 +93,8 @@ bool convertToJson(const RequestResponse_BATTERY_RATINGS& src, JsonVariant dst) 
 }
 bool convertToJson(const RequestResponse_BATTERY_INFO& src, JsonVariant dst) {
     if (!src.isValid()) return false;
-    dst["operationalMode"] = src.operationalMode;
-    dst["type"] = src.type;
+    dst["operationalMode"] = toString (src.mode);
+    dst["type"] = toString (src.type);
     dst["productionDate"] = src.productionDate.toString();
     dst["automaticSleepSec"] = src.automaticSleepSec;
     return true;
@@ -217,6 +184,9 @@ bool convertToJson(const RequestResponse_FAILURE& src, JsonVariant dst) {
     }
     return true;
 }
+
+// -----------------------------------------------------------------------------------------------
+
 template<typename TYPE>
 void addToJson(const TYPE flags, JsonArray&& arr) {
     for (TYPE flag = static_cast<TYPE>(1); flag < TYPE::All; flag = static_cast<TYPE>(static_cast<int>(flag) << 1))
@@ -226,6 +196,7 @@ bool convertToJson(const Config& src, JsonVariant dst) {
     dst["id"] = src.id;
     addToJson(src.capabilities, dst["capabilities"].to<JsonArray>());
     addToJson(src.categories, dst["categories"].to<JsonArray>());
+    addToJson(src.debugging, dst["debugging"].to<JsonArray>());
     return true;
 }
 
@@ -247,6 +218,8 @@ namespace detail {
         return String(static_cast<int>(v));
     }
 }
+
+// -----------------------------------------------------------------------------------------------
 
 template<typename TYPE>
 void debugDump(const TYPE&) {
@@ -284,7 +257,9 @@ void debugDump(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_MAX, 
         DEBUG_PRINTF(" %s", detail::toString(v).c_str());    // XXX units
     DEBUG_PRINTF("\n");
 }
-//
+
+// -----------------------------------------------------------------------------------------------
+
 void debugDump(const RequestResponse_BMS_CONFIG& src) {
     if (!src.isValid()) return;
     DEBUG_PRINTF("boards=%d, cells=%d,%d,%d, sensors=%d,%d,%d\n",
@@ -304,8 +279,8 @@ void debugDump(const RequestResponse_BATTERY_STAT& src) {
 }
 void debugDump(const RequestResponse_BATTERY_INFO& src) {
     if (!src.isValid()) return;
-    DEBUG_PRINTF("operationalMode=%d, type=%d, productionDate=%s, sleep=%d, unknown 1=%d, 2=%d\n",
-                 src.operationalMode, src.type,
+    DEBUG_PRINTF("mode=%s, type=%s, date=%s, sleep=%d, unknown 1=%d, 2=%d\n",
+                 toString (src.mode).c_str (), toString (src.type).c_str (),
                  src.productionDate.toString().c_str(),
                  src.automaticSleepSec,
                  src.unknown1, src.unknown2);
@@ -435,20 +410,21 @@ bool convertToJson(const Interface& src, JsonVariant dst) {
 void dumpDebug(const Interface& src) {
 
     const auto convertConfig = [&](const Config& config) {
-        DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s\n", config.id, toStringBitwise(config.capabilities), toStringBitwise(config.categories));
+        DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s, debugging=%s\n", 
+        config.id, toStringBitwise(config.capabilities).c_str (), toStringBitwise(config.categories).c_str (), toStringBitwise(config.debugging).c_str ());
     };
     const auto convertCategory = [&](const Config& config, const Categories category) -> String {
-        DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id, toString(category));
+        DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id, toString(category).c_str ());
         return toString(category);
     };
     const auto convertElement = [&](auto&&, const auto& component) {
         if (!src.isEnabled(&component)) return false;
         if (component.isValid()) {
-            DEBUG_PRINTF("  %s: <%s> ", getName(component), toStringISO (component.valid ()));
+            DEBUG_PRINTF("  %s: <%lu> ", getName(component), systemSecsSince (component.valid ()));
             debugDump(component);
             return true;
         } else { 
-            DEBUG_PRINTF("  %s: <Not valid>", getName(component));
+            DEBUG_PRINTF("  %s: <Not valid>\n", getName(component));
             return false;
         }
     };

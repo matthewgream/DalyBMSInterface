@@ -56,7 +56,7 @@ void testRaw() {
     daly_bms::exception_catcher([&] {
         serial = new HardwareSerial(serialId);
         serial->setRxBufferSize(1024);
-        serial->begin(9600, SERIAL_8N1, serialRxPin, serialTxPin);
+        serial->begin(DalyAggregationManager::DEFAULT_SERIAL_BAUD, DalyAggregationManager::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
         if (enPin >= 0) digitalWrite(enPin, HIGH);
 
         while (1) {
@@ -71,17 +71,19 @@ void testRaw() {
         }
     });
 }
+
+// -----------------------------------------------------------------------------------------------
+
 void testSingle () {
 
     // const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
     // daly_bms::Config config = { .id = "manager", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
-
     const int serialId = BALANCE_ID, serialRxPin = BALANCE_PIN_RX, serialTxPin = BALANCE_PIN_TX, enPin = BALANCE_PIN_EN;
     daly_bms::Config config = { .id = "balance", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
 
     HardwareSerial serial (serialId);
     serial.setRxBufferSize(1024);
-    serial.begin(9600, SERIAL_8N1, serialRxPin, serialTxPin);
+    serial.begin(DalyAggregationManager::DEFAULT_SERIAL_BAUD, DalyAggregationManager::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
     daly_bms::HardwareSerialConnector connector (serial);
     daly_bms::Interface interface (config, connector);
     interface.begin ();
@@ -101,15 +103,9 @@ void testSingle () {
     }
 }
 
-/* manager ...
-        RequestResponse_BATTERY_INFO battery_info; // operationalMode=1, type=1, productionDate=20240612, sleep=840, unknown 1=16, 2=10
-   balance ... 
-        RequestResponse_BATTERY_INFO battery_info; // operationalMode=1, type=1, productionDate=20000101, sleep=840, unknown 1=16, 2=10
-*/
 // -----------------------------------------------------------------------------------------------
 
-Intervalable processGate(5 * 1000),
-    requestStatus(15 * 1000), requestDiagnostics(30 * 1000), reportData(10 * 1000);
+Intervalable processInterval (5 * 1000), requestStatus(30 * 1000), requestDiagnostics(60 * 1000), reportData(30 * 1000);
 
 DalyAggregationManager* dalyManager{nullptr};
 
@@ -120,47 +116,59 @@ void setup() {
     DEBUG_PRINTF("*** SETUP\n");
 
     // testRaw ();
-    testSingle();
+    // testSingle();
 
-    // DalyAggregationManager::Config* config = new DalyAggregationManager::Config({
-    //     .instances = {
-    //         { .daly = {
-    //             .id = MANAGER_NAME,
-    //             .capabilities = DalyAggregationManager::DalyCapabilities::All,
-    //             .categories = DalyAggregationManager::DalyCategories::All },
-    //             .serialId = MANAGER_ID,
-    //             .serialRxPin = MANAGER_PIN_RX,
-    //             .serialTxPin = MANAGER_PIN_TX,
-    //           .enPin = MANAGER_PIN_EN },
-            // { .daly = { 
-            //     .id = BALANCE_NAME, 
-            //     .capabilities = DalyAggregationManager::DalyCapabilities::All, 
-            //     .categories = DalyAggregationManager::DalyCategories::All }, 
-            //     .serialId = BALANCE_ID, 
-            //     .serialRxPin = BALANCE_PIN_RX, 
-            //     .serialTxPin = BALANCE_PIN_TX, 
-            //     .enPin = BALANCE_PIN_EN },
-    //     }
-    // });
-    // dalyManager = new DalyAggregationManager(*config);
-    // if (!dalyManager || !dalyManager->begin()) {
-    //     DEBUG_PRINTF("*** FAILED\n");
-    //     esp_deep_sleep_start();
-    // }
-
-
+    DalyAggregationManager::Config* config = new DalyAggregationManager::Config{
+        .instances = std::vector<DalyAggregationManager::ConfigInstance>{
+            DalyAggregationManager::ConfigInstance{ 
+                .daly = {
+                    .id = MANAGER_NAME,
+                    .capabilities = 
+                        DalyAggregationManager::DalyCapabilities::Managing 
+                        | DalyAggregationManager::DalyCapabilities::TemperatureSensing
+                        - DalyAggregationManager::DalyCapabilities::FirmwareIndex - DalyAggregationManager::DalyCapabilities::RealTimeClock,
+                    .categories = DalyAggregationManager::DalyCategories::All,
+                    .debugging = DalyAggregationManager::DalyDebugging::Errors | DalyAggregationManager::DalyDebugging::Requests,
+                },
+                .serialId = MANAGER_ID,
+                .serialRxPin = MANAGER_PIN_RX,
+                .serialTxPin = MANAGER_PIN_TX,
+                .enPin = MANAGER_PIN_EN 
+            },
+            DalyAggregationManager::ConfigInstance{ 
+                .daly = { 
+                    .id = BALANCE_NAME, 
+                    .capabilities = 
+                        DalyAggregationManager::DalyCapabilities::Balancing
+                        | DalyAggregationManager::DalyCapabilities::TemperatureSensing
+                        - DalyAggregationManager::DalyCapabilities::FirmwareIndex, 
+                    .categories = DalyAggregationManager::DalyCategories::All,
+                    .debugging = DalyAggregationManager::DalyDebugging::Errors | DalyAggregationManager::DalyDebugging::Requests,
+                }, 
+                .serialId = BALANCE_ID, 
+                .serialRxPin = BALANCE_PIN_RX, 
+                .serialTxPin = BALANCE_PIN_TX, 
+                .enPin = BALANCE_PIN_EN 
+            }
+        }
+    };
+    dalyManager = new DalyAggregationManager(*config);
+    if (!dalyManager || !dalyManager->begin()) {
+        DEBUG_PRINTF("*** FAILED\n");
+        esp_deep_sleep_start();
+    }
 
 }
 
 void loop() {
-    // processGate.wait();
-    // daly_bms::exception_catcher([&] {
-    //     DEBUG_PRINTF("*** LOOP\n");
-    //     dalyManager->loop();
-    //     if (requestStatus) dalyManager->requestStatus();
-    //     if (requestDiagnostics) dalyManager->requestDiagnostics();
-    //     if (reportData) dalyManager->dumpDebug();
-    // });
+    daly_bms::exception_catcher([&] {
+        DEBUG_PRINTF("*** LOOP\n");
+        if (requestStatus) dalyManager->requestStatus();
+        if (requestDiagnostics) dalyManager->requestDiagnostics(), dalyManager->updateInitial();
+        processInterval.wait();
+        dalyManager->process();
+        if (reportData) dalyManager->dumpDebug();
+    });
 }
 
 // -----------------------------------------------------------------------------------------------

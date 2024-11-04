@@ -28,6 +28,16 @@
 #define DEBUG_ONLY(...)
 #endif
 
+#include <cxxabi.h>
+String demangle(const char* name) {
+    int status;
+    char* demangled = abi::__cxa_demangle(name, nullptr, nullptr, &status);
+    String result = (status == 0) ? demangled : name;
+    free(demangled);
+    result.replace ("daly_bms::", "");
+    return result;
+}
+
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
@@ -95,18 +105,14 @@ String toStringHex(const uint8_t data[], const size_t size, const char* separato
 
 #include <time.h>
 #include <stdio.h> // XXX change from snprintf
+#include <Arduino.h>
 
-String toStringISO(time_t time, unsigned long ms = 0) {
-    char buf[30];
-    struct tm* tm = localtime(&time);
-    snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d.%03luZ",
-        tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-        tm->tm_hour, tm->tm_min, tm->tm_sec, ms);
-    return String(buf);
+typedef unsigned long SystemTicks_t;
+SystemTicks_t systemTicksNow () {
+    return millis ();
 }
-time_t timestamp () {
-    time_t t = time (nullptr);
-    return t > static_cast <time_t> (0) ? t : static_cast <time_t> (0);
+unsigned long systemSecsSince(SystemTicks_t ticks) {
+    return (millis () - ticks) / 1000;
 }
 
 // -----------------------------------------------------------------------------------------------

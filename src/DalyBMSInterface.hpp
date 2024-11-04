@@ -18,7 +18,15 @@ namespace daly_bms {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-enum Direction { Transmit, Receive };
+enum Direction { Transmit, Receive, Error };
+inline String toString (const Direction& direction) {
+    switch (direction) {
+    case Direction::Transmit: return "send";
+    case Direction::Receive:  return "recv";
+    case Direction::Error:    return "error";
+    default: return "unknown";
+    }
+}
 using RequestResponseFrame_Handlerable = std::pair <const RequestResponseFrame&, Direction>;
 class RequestResponseFrame_Receiver: public Handlerable <RequestResponseFrame_Handlerable, bool> {
 
@@ -61,7 +69,6 @@ protected:
         return false;
     }
     bool readStateProcessingHeader(uint8_t byte) {
-        // DEBUG_PRINTF ("frame(header)[%d]=%02X\n", _readOffset, byte);
         _readFrame[_readOffset] = byte;
         if (++_readOffset < RequestResponseFrame::Constants::SIZE_HEADER)
             return false;
@@ -71,13 +78,10 @@ protected:
         return false;
     }
     bool readStateProcessingContent(uint8_t byte) {
-        // DEBUG_PRINTF ("frame(content)[%d]=%02X\n", _readOffset, byte);
         _readFrame[_readOffset] = byte;
         if (++_readOffset < RequestResponseFrame::Constants::SIZE_FRAME)
             return false;
-        if (_readFrame.valid())
-            notifyHandlers(Handler::Type(_readFrame, Direction::Receive));
-        else DEBUG_PRINTF ("frame invalid\n");
+        notifyHandlers(Handler::Type(_readFrame, _readFrame.valid() ? Direction::Receive : Direction::Error));
         return true;
     }
 
@@ -99,7 +103,6 @@ private:
 class RequestResponseManager: public Handlerable <RequestResponse&, bool> {
 public:
     bool receiveFrame(const RequestResponseFrame& frame) {
-        DEBUG_PRINTF ("receive_frame: %d\n", frame.getCommand ());
         auto it = _requestsMap.find(frame.getCommand());
         if (it != _requestsMap.end())
             if (it->second->processResponse(frame))
@@ -108,13 +111,13 @@ public:
                     return true;
                 }
                 else {
-                    if (it->second->isComplete ()) DEBUG_PRINTF ("receiveFrame: complete, but not valid\n");
+                    if (it->second->isComplete ()) DEBUG_PRINTF ("RequestResponseManager: frame complete but not valid\n");
                 }
             else {
-                if (it->second->isComplete ()) DEBUG_PRINTF ("receiveFrame: could not process\n");
+                if (it->second->isComplete ()) DEBUG_PRINTF ("RequestResponseManager: frame complete but unprocessable\n");
             }
         else {
-            DEBUG_PRINTF ("receiveFrame: processor not found\n");
+            DEBUG_PRINTF ("RequestResponseManager: frame handler not found\n");
         }
         return false;
     }
@@ -132,6 +135,13 @@ public:
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
+enum class Debugging {
+    None = 0,
+    Frames = 1 << 0,
+    Requests = 1 << 1,
+    Errors = 1 << 2,
+    All = Frames | Requests |Errors
+};
 enum class Capabilities {
     None = 0,
     Managing = 1 << 0,
@@ -151,11 +161,23 @@ enum class Categories {
     All = Information | Thresholds | Status | Diagnostics | Commands
 };
 
+inline Debugging operator|(Debugging a, Debugging b) {
+    return static_cast<Debugging>(static_cast<int>(a) | static_cast<int>(b));
+}
+inline Debugging operator&(Debugging a, Debugging b) {
+    return static_cast<Debugging>(static_cast<int>(a) & static_cast<int>(b));
+}
+inline Debugging operator-(Debugging a, Debugging b) {
+    return static_cast<Debugging>(static_cast<int>(a) & ~static_cast<int>(b));
+}
 inline Capabilities operator|(Capabilities a, Capabilities b) {
     return static_cast<Capabilities>(static_cast<int>(a) | static_cast<int>(b));
 }
 inline Capabilities operator&(Capabilities a, Capabilities b) {
     return static_cast<Capabilities>(static_cast<int>(a) & static_cast<int>(b));
+}
+inline Capabilities operator-(Capabilities a, Capabilities b) {
+    return static_cast<Capabilities>(static_cast<int>(a) & ~static_cast<int>(b));
 }
 inline Categories operator|(Categories a, Categories b) {
     return static_cast<Categories>(static_cast<int>(a) | static_cast<int>(b));
@@ -163,7 +185,18 @@ inline Categories operator|(Categories a, Categories b) {
 inline Categories operator&(Categories a, Categories b) {
     return static_cast<Categories>(static_cast<int>(a) & static_cast<int>(b));
 }
-
+inline Categories operator-(Categories a, Categories b) {
+    return static_cast<Categories>(static_cast<int>(a) & ~static_cast<int>(b));
+}
+inline String toString(Debugging debugging) {
+    switch (debugging) {
+        case Debugging::None: return "None";
+            case Debugging::Requests: return "Requests";
+        case Debugging::Frames: return "Frames";
+        case Debugging::All: return "All";
+        default: return "Unknown";
+    }
+}
 inline String toString(Capabilities capability) {
     switch (capability) {
         case Capabilities::None: return "None";
@@ -193,8 +226,9 @@ inline String toString(Categories category) {
 
 typedef struct {
     String id;
-    Capabilities capabilities;
-    Categories categories;
+    Capabilities capabilities{Capabilities::None};
+    Categories categories{Categories::All};
+    Debugging debugging{Debugging::Errors};
 } Config;
 
 // -----------------------------------------------------------------------------------------------
@@ -207,6 +241,7 @@ class Interface {
 public:
     using Capabilities = daly_bms::Capabilities;
     using Categories = daly_bms::Categories;
+    using Debugging = daly_bms::Debugging;
 
     const Config& getConfig () const{ return config; }
     bool isEnabled(const RequestResponse* response) const {
@@ -217,6 +252,9 @@ public:
     }
     bool isEnabled(const Categories category) const {
         return (config.categories & category) != Categories::None;
+    };
+    bool isEnabled(const Debugging debugging) const {
+        return (config.debugging & debugging) != Debugging::None;
     };
 
     using Connector = RequestResponseFrame::Receiver;
@@ -288,7 +326,7 @@ public:
               { Categories::Status, Capabilities::TemperatureSensing, status.sensor }, // Balancing response, is probably onboard sensor
               { Categories::Status, Capabilities::Managing, status.mosfet },
               { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.information },
-              { Categories::Status, Capabilities::Managing, status.failure },
+              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.failure },
 
               { Categories::Diagnostics, Capabilities::Managing | Capabilities::Balancing, diagnostics.voltages },
               { Categories::Diagnostics, Capabilities::TemperatureSensing, diagnostics.sensors },
@@ -321,7 +359,8 @@ public:
             Interface& interface;
             FrameHandler (Interface& i): interface (i) {}
             bool handle (RequestResponseFrame::Receiver::Handler::Type frame) {
-                DEBUG_PRINTF("DalyBMS<%s>: %s: %s\n", interface.config.id, frame.second == Direction::Transmit ? "send" : "recv", frame.first.toString().c_str());
+                if (interface.isEnabled (Debugging::Frames) || interface.isEnabled (Debugging::Errors) && frame.second == Direction::Error)
+                    DEBUG_PRINTF("DalyBMS<%s>: %s: %s\n", interface.config.id, toString (frame.second), frame.first.toString().c_str());
                 if (frame.second == Direction::Receive)
                     interface.manager.receiveFrame(frame.first);
                 return frame.second == Direction::Receive;
@@ -333,21 +372,32 @@ public:
     void begin() {
         DEBUG_PRINTF("DalyBMS<%s>: begin\n", config.id);
         connector.begin();
-//        requestInitial();
     }
     void process() {
         connector.process();
     }
 
     void issue(RequestResponse& request) {
-        if (request.isRequestable())
+        if (request.isRequestable()) {
+            if (isEnabled (Debugging::Requests))
+                DEBUG_PRINTF("DalyBMS<%s>: request %s\n", config.id, request.getName ().c_str ());
             connector.write(request.prepareRequest());
+        }
     }
     void requestStatus() {
         request(Categories::Status);
     }
     void requestDiagnostics() {
         request(Categories::Diagnostics);
+    }
+    void requestInitial() {
+        DEBUG_PRINTF("DalyBMS<%s>: requestInitial\n", config.id);
+        for (auto category : { Categories::Information, Categories::Thresholds })
+            request(category);
+    }
+    void updateInitial() {
+        for (auto category : { Categories::Information, Categories::Thresholds })
+            update(category);
     }
 
 protected:
@@ -366,11 +416,17 @@ public:
             for (auto r : it->second)
                 issue(*r);
     }
-    void requestInitial() {
-        DEBUG_PRINTF("DalyBMS<%s>: requestInitial\n", config.id);
-        for (auto category : { Categories::Information, Categories::Thresholds, Categories::Status, Categories::Diagnostics, Categories::Commands })
-            request(category);
+    void update(const Categories category) {
+        if (!isEnabled(category)) return;
+        DEBUG_PRINTF("DalyBMS<%s>: update%s\n", config.id, toString(category).c_str());
+        auto it = requestResponses.find(category);
+        if (it != requestResponses.end())
+            for (auto r : it->second) {
+                if (!r->isValid ()) // XXX or long time?
+                    issue(*r);
+            }
     }
+
     void dumpDebug() const {
         return daly_bms::dumpDebug(*this);
     }
