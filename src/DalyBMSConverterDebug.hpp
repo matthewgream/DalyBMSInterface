@@ -1,10 +1,11 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
+#ifndef DALYBMS_FLATFILES
 #pragma once
-
 #include "DalyBMSUtilities.hpp"
-#include "DalyBMSInterface.hpp"
+#include "DalyBMSManager.hpp"
+#endif
 
 #include <Arduino.h> // String
 
@@ -13,13 +14,13 @@ namespace daly_bms {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-void debugDump(const Interface& src) {
+void debugDump(const Manager& src) {
 
-    const auto convertConfig = [&](const Interface::Config& config) {
+    const auto convertConfig = [&](const Manager::Config& config) {
         DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s, debugging=%s\n",
         config.id, toStringBitwise(config.capabilities).c_str (), toStringBitwise(config.categories).c_str (), toStringBitwise(config.debugging).c_str ());
     };
-    const auto convertCategory = [&](const Interface::Config& config, const Categories category) -> String {
+    const auto convertCategory = [&](const Manager::Config& config, const Categories category) -> String {
         DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id, toString(category).c_str ());
         return toString(category);
     };

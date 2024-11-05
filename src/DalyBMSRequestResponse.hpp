@@ -1,9 +1,10 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
+#ifndef DALYBMS_FLATFILES
 #pragma once
-
 #include "DalyBMSUtilities.hpp"
+#endif
 
 #include <cstdint>
 #include <array>
@@ -104,7 +105,7 @@ public:
     }
 
     String toString() const {
-        return toStringHex (_data.data (), Constants::SIZE_FRAME, " ");
+        return BytesToHexString<Constants::SIZE_FRAME> (_data.data (), " ");
     }
 
 protected:

@@ -1,10 +1,11 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
+#ifndef DALYBMS_FLATFILES
 #pragma once
-
 #include "DalyBMSUtilities.hpp"
-#include "DalyBMSInterface.hpp"
+#include "DalyBMSManager.hpp"
+#endif
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -192,7 +193,7 @@ void addToJson(const TYPE flags, JsonArray&& arr) {
     for (TYPE flag = static_cast<TYPE>(1); flag < TYPE::All; flag = static_cast<TYPE>(static_cast<int>(flag) << 1))
         if ((flags & flag) != TYPE::None) arr.add(toString(flag));
 }
-bool convertToJson(const Interface::Config& src, JsonVariant dst) {
+bool convertToJson(const Manager::Config& src, JsonVariant dst) {
     dst["id"] = src.id;
     addToJson(src.capabilities, dst["capabilities"].to<JsonArray>());
     addToJson(src.categories, dst["categories"].to<JsonArray>());
@@ -203,12 +204,12 @@ bool convertToJson(const Interface::Config& src, JsonVariant dst) {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-bool convertToJson(const Interface& src, JsonVariant dst) {
+bool convertToJson(const Manager& src, JsonVariant dst) {
 
-    const auto convertConfig = [&](const Interface::Config& config) {
+    const auto convertConfig = [&](const Manager::Config& config) {
         dst["config"] = config;
     };
-    const auto convertCategory = [&](const Interface::Config& config, const Categories category) -> JsonVariant {
+    const auto convertCategory = [&](const Manager::Config& config, const Categories category) -> JsonVariant {
         return dst[toString(category)];
     };
     const auto convertElement = [&](auto&& handler, const auto& component) {

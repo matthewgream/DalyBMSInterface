@@ -2,10 +2,14 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
+#ifndef DALYBMS_FLATFILES
 #pragma once
+#endif
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
+
+#if !defined (DEBUG) && !defined (DEBUG_START)
 
 #include <Arduino.h>
 
@@ -26,6 +30,8 @@
     do { \
     } while (0)
 #define DEBUG_ONLY(...)
+#endif
+
 #endif
 
 // -----------------------------------------------------------------------------------------------
@@ -79,16 +85,22 @@ protected:
 
 #include <Arduino.h>
 
-String toStringHex(const uint8_t data[], const size_t size, const char* separator = "") {
-    String result;
-    result.reserve(size);
-    static const char HEX_CHARS[] = "0123456789ABCDEF";
-    for (size_t i = 0; i < size; i++) {
-        if (i > 0) result += separator;
-        result += HEX_CHARS[data[i] >> 4];
-        result += HEX_CHARS[data[i] & 0x0F];
+template<size_t N>
+String BytesToHexString(const uint8_t bytes[], const char* separator = ":") {
+    constexpr size_t separator_max = 1;    // change if needed
+    if (strlen(separator) > separator_max)
+        return String("");
+    char buffer[(N * 2) + ((N - 1) * separator_max) + 1] = { '\0' }, *buffer_ptr = buffer;
+    for (size_t i = 0; i < N; i++) {
+        if (i > 0 && separator[0] != '\0')
+            for (const char* separator_ptr = separator; *separator_ptr != '\0';)
+                *buffer_ptr++ = *separator_ptr++;
+        static const char hex_chars[] = "0123456789ABCDEF";
+        *buffer_ptr++ = hex_chars[(bytes[i] >> 4) & 0x0F];
+        *buffer_ptr++ = hex_chars[bytes[i] & 0x0F];
     }
-    return result;
+    *buffer_ptr = '\0';
+    return String(buffer);
 }
 
 // -----------------------------------------------------------------------------------------------

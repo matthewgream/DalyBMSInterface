@@ -2,10 +2,12 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
+#ifndef DALYBMS_FLATFILES
 #pragma once
-
 #include "DalyBMSUtilities.hpp"
 #include "DalyBMSRequestResponse.hpp"
+#include "DalyBMSManager.hpp"
+#endif
 
 #include <HardwareSerial.h>
 

@@ -1,4 +1,6 @@
 
+#ifndef DALYBMS_FLATFILES
+
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
@@ -28,7 +30,7 @@ public:
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#include "DalyBMSInstance.hpp"
+#include "DalyBMSInterface.hpp"
 
 // -----------------------------------------------------------------------------------------------
 
@@ -78,20 +80,20 @@ void testOne() {
     // const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
     // daly_bms::Config config = { .id = "manager", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
     const int serialId = BALANCE_ID, serialRxPin = BALANCE_PIN_RX, serialTxPin = BALANCE_PIN_TX, enPin = BALANCE_PIN_EN;
-    daly_bms::Interface::Config config = { .id = "balance", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
+    daly_bms::Manager::Config config = { .id = "balance", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
 
     HardwareSerial serial (serialId);
     serial.begin(daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_BAUD, daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
     daly_bms::HardwareSerialConnector connector (serial);
-    daly_bms::Interface interface (config, connector);
-    interface.begin ();
+    daly_bms::Manager manager (config, connector);
+    manager.begin ();
 
     while (1) {
-        auto& request = interface.information.rtc;
-        // interface.issue (interface.status.info); // required to capture numbers for diagnostics request/responses
-        interface.issue (request);
+        auto& request = manager.information.rtc;
+        // manager.issue (manager.status.info); // required to capture numbers for diagnostics request/responses
+        manager.issue (request);
         delay (5000);
-        interface.process ();
+        manager.process ();
         if (request.isValid ()) {
             DEBUG_PRINTF ("---> \n");
             request.debugDump ();
@@ -105,7 +107,7 @@ void testOne() {
 
 Intervalable processInterval (5 * 1000), requestStatus(15 * 1000), requestDiagnostics(30 * 1000), reportData(30 * 1000);
 
-daly_bms::Instances* dalyInstances{nullptr};
+daly_bms::Interfaces* dalyInterfaces{nullptr};
 
 void setup() {
 
@@ -116,12 +118,12 @@ void setup() {
     // testRaw ();
     // testOne ();
 
-    using DalyBMSInstances = daly_bms::Instances;
+    using DalyBMSInterfaces = daly_bms::Interfaces;
 
-    DalyBMSInstances::Config* config = new DalyBMSInstances::Config{
-        .instances = std::vector<daly_bms::Instance::Config>{
-            daly_bms::Instance::Config{
-                .daly = {
+    DalyBMSInterfaces::Config* config = new DalyBMSInterfaces::Config{
+        .interfaces = std::vector<daly_bms::Interface::Config>{
+            daly_bms::Interface::Config{
+                .manager = {
                     .id = MANAGER_NAME,
                     .capabilities = daly_bms::Capabilities::Managing + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex - daly_bms::Capabilities::RealTimeClock,
                     .categories = daly_bms::Categories::All,
@@ -129,8 +131,8 @@ void setup() {
                 },
                 .serialId = MANAGER_ID, .serialRxPin = MANAGER_PIN_RX, .serialTxPin = MANAGER_PIN_TX, .enPin = MANAGER_PIN_EN
             },
-            daly_bms::Instance::Config{
-                .daly = {
+            daly_bms::Interface::Config{
+                .manager = {
                     .id = BALANCE_NAME,
                     .capabilities = daly_bms::Capabilities::Balancing + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex,
                     .categories = daly_bms::Categories::All,
@@ -140,8 +142,8 @@ void setup() {
             }
         }
     };
-    dalyInstances = new daly_bms::Instances(*config);
-    if (!dalyInstances || !dalyInstances->begin()) {
+    dalyInterfaces = new daly_bms::Interfaces(*config);
+    if (!dalyInterfaces || !dalyInterfaces->begin()) {
         DEBUG_PRINTF("*** FAILED\n");
         esp_deep_sleep_start();
     }
@@ -151,11 +153,11 @@ void setup() {
 void loop() {
     try {
         DEBUG_PRINTF("*** LOOP\n");
-        if (requestStatus) dalyInstances->requestStatus();
-        if (requestDiagnostics) dalyInstances->requestDiagnostics(), dalyInstances->updateInitial();
+        if (requestStatus) dalyInterfaces->requestStatus();
+        if (requestDiagnostics) dalyInterfaces->requestDiagnostics(), dalyInterfaces->updateInitial();
         processInterval.wait();
-        dalyInstances->process();
-        // if (reportData) dalyInstances->debugDump();
+        dalyInterfaces->process();
+        // if (reportData) dalyInterfaces->debugDump();
     } catch (const std::exception& e) {
         DEBUG_PRINTF("exception: %s\n", e.what());
     } catch (...) {
@@ -165,3 +167,5 @@ void loop() {
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
+
+#endif
