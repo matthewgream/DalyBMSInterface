@@ -2,13 +2,9 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-typedef unsigned long interval_t;
-typedef unsigned long counter_t;
-
-// -----------------------------------------------------------------------------------------------
-
 #include <Arduino.h>
 
+typedef unsigned long interval_t;
 class Intervalable {
     interval_t _interval, _previous{};
 public:
@@ -32,7 +28,7 @@ public:
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#include "DalyBMSManager.hpp"
+#include "DalyBMSInstance.hpp"
 
 // -----------------------------------------------------------------------------------------------
 
@@ -54,16 +50,15 @@ void testRaw() {
     HardwareSerial* serial;
 
     daly_bms::exception_catcher([&] {
-        serial = new HardwareSerial(serialId);
-        serial->setRxBufferSize(1024);
-        serial->begin(DalyAggregationManager::DEFAULT_SERIAL_BAUD, DalyAggregationManager::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
+        HardwareSerial serial(serialId);
+        serial.begin(daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_BAUD, daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
         if (enPin >= 0) digitalWrite(enPin, HIGH);
 
         while (1) {
             uint8_t command [13] = { 0xA5, 0x40 , 0x90 , 0x08 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x7D };
-            serial->write(command, 13);
-            while (serial->available() > 0) {
-                uint8_t byte = serial->read();
+            serial.write(command, 13);
+            while (serial.available() > 0) {
+                uint8_t byte = serial.read();
                 DEBUG_PRINTF("<%02X>", byte);
             }
             DEBUG_PRINTF("*\n");
@@ -74,16 +69,15 @@ void testRaw() {
 
 // -----------------------------------------------------------------------------------------------
 
-void testSingle () {
+void testOne() {
 
     // const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
     // daly_bms::Config config = { .id = "manager", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
     const int serialId = BALANCE_ID, serialRxPin = BALANCE_PIN_RX, serialTxPin = BALANCE_PIN_TX, enPin = BALANCE_PIN_EN;
-    daly_bms::Config config = { .id = "balance", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
+    daly_bms::Interface::Config config = { .id = "balance", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
 
     HardwareSerial serial (serialId);
-    serial.setRxBufferSize(1024);
-    serial.begin(DalyAggregationManager::DEFAULT_SERIAL_BAUD, DalyAggregationManager::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
+    serial.begin(daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_BAUD, daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
     daly_bms::HardwareSerialConnector connector (serial);
     daly_bms::Interface interface (config, connector);
     interface.begin ();
@@ -96,7 +90,7 @@ void testSingle () {
         interface.process ();
         if (request.isValid ()) {
             DEBUG_PRINTF ("---> \n");
-            daly_bms::debugDump (request);
+            request.debugDump ();
             DEBUG_PRINTF ("<--- \n");
         }
         DEBUG_PRINTF (".\n");
@@ -105,9 +99,9 @@ void testSingle () {
 
 // -----------------------------------------------------------------------------------------------
 
-Intervalable processInterval (5 * 1000), requestStatus(30 * 1000), requestDiagnostics(60 * 1000), reportData(30 * 1000);
+Intervalable processInterval (5 * 1000), requestStatus(15 * 1000), requestDiagnostics(30 * 1000), reportData(30 * 1000);
 
-DalyAggregationManager* dalyManager{nullptr};
+daly_bms::Instances* dalyInstances{nullptr};
 
 void setup() {
 
@@ -116,44 +110,34 @@ void setup() {
     DEBUG_PRINTF("*** SETUP\n");
 
     // testRaw ();
-    // testSingle();
+    // testOne ();
 
-    DalyAggregationManager::Config* config = new DalyAggregationManager::Config{
-        .instances = std::vector<DalyAggregationManager::ConfigInstance>{
-            DalyAggregationManager::ConfigInstance{ 
+    using DalyBMSInstances = daly_bms::Instances;
+
+    DalyBMSInstances::Config* config = new DalyBMSInstances::Config{
+        .instances = std::vector<daly_bms::Instance::Config>{
+            daly_bms::Instance::Config{ 
                 .daly = {
                     .id = MANAGER_NAME,
-                    .capabilities = 
-                        DalyAggregationManager::DalyCapabilities::Managing 
-                        | DalyAggregationManager::DalyCapabilities::TemperatureSensing
-                        - DalyAggregationManager::DalyCapabilities::FirmwareIndex - DalyAggregationManager::DalyCapabilities::RealTimeClock,
-                    .categories = DalyAggregationManager::DalyCategories::All,
-                    .debugging = DalyAggregationManager::DalyDebugging::Errors | DalyAggregationManager::DalyDebugging::Requests,
+                    .capabilities = daly_bms::Capabilities::Managing  + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex - daly_bms::Capabilities::RealTimeClock,
+                    .categories = daly_bms::Categories::All,
+                    .debugging = daly_bms::Debugging::Errors + daly_bms::Debugging::Requests + daly_bms::Debugging::Responses,
                 },
-                .serialId = MANAGER_ID,
-                .serialRxPin = MANAGER_PIN_RX,
-                .serialTxPin = MANAGER_PIN_TX,
-                .enPin = MANAGER_PIN_EN 
+                .serialId = MANAGER_ID, .serialRxPin = MANAGER_PIN_RX, .serialTxPin = MANAGER_PIN_TX, .enPin = MANAGER_PIN_EN 
             },
-            DalyAggregationManager::ConfigInstance{ 
+            daly_bms::Instance::Config{ 
                 .daly = { 
                     .id = BALANCE_NAME, 
-                    .capabilities = 
-                        DalyAggregationManager::DalyCapabilities::Balancing
-                        | DalyAggregationManager::DalyCapabilities::TemperatureSensing
-                        - DalyAggregationManager::DalyCapabilities::FirmwareIndex, 
-                    .categories = DalyAggregationManager::DalyCategories::All,
-                    .debugging = DalyAggregationManager::DalyDebugging::Errors | DalyAggregationManager::DalyDebugging::Requests,
+                    .capabilities = daly_bms::Capabilities::Balancing + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex, 
+                    .categories = daly_bms::Categories::All,
+                    .debugging = daly_bms::Debugging::Errors + daly_bms::Debugging::Requests + daly_bms::Debugging::Responses,
                 }, 
-                .serialId = BALANCE_ID, 
-                .serialRxPin = BALANCE_PIN_RX, 
-                .serialTxPin = BALANCE_PIN_TX, 
-                .enPin = BALANCE_PIN_EN 
+                .serialId = BALANCE_ID, .serialRxPin = BALANCE_PIN_RX, .serialTxPin = BALANCE_PIN_TX, .enPin = BALANCE_PIN_EN 
             }
         }
     };
-    dalyManager = new DalyAggregationManager(*config);
-    if (!dalyManager || !dalyManager->begin()) {
+    dalyInstances = new daly_bms::Instances(*config);
+    if (!dalyInstances || !dalyInstances->begin()) {
         DEBUG_PRINTF("*** FAILED\n");
         esp_deep_sleep_start();
     }
@@ -163,11 +147,11 @@ void setup() {
 void loop() {
     daly_bms::exception_catcher([&] {
         DEBUG_PRINTF("*** LOOP\n");
-        if (requestStatus) dalyManager->requestStatus();
-        if (requestDiagnostics) dalyManager->requestDiagnostics(), dalyManager->updateInitial();
+        if (requestStatus) dalyInstances->requestStatus();
+        if (requestDiagnostics) dalyInstances->requestDiagnostics(), dalyInstances->updateInitial();
         processInterval.wait();
-        dalyManager->process();
-        if (reportData) dalyManager->dumpDebug();
+        dalyInstances->process();
+        // if (reportData) dalyInstances->debugDump();
     });
 }
 

@@ -5,10 +5,8 @@
 #pragma once
 
 #include "DalyBMSUtilities.hpp"
-#include "DalyBMSRequestResponseBase.hpp"
+#include "DalyBMSRequestResponse.hpp"
 #include "DalyBMSRequestResponseTypes.hpp"
-
-#include <HardwareSerial.h>
 
 #include <vector>
 #include <map>
@@ -18,7 +16,7 @@ namespace daly_bms {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-enum Direction { Transmit, Receive, Error };
+enum Direction { Transmit, Receive, Error }; // XXX rename
 inline String toString (const Direction& direction) {
     switch (direction) {
     case Direction::Transmit: return "send";
@@ -27,6 +25,7 @@ inline String toString (const Direction& direction) {
     default: return "unknown";
     }
 }
+
 using RequestResponseFrame_Handlerable = std::pair <const RequestResponseFrame&, Direction>;
 class RequestResponseFrame_Receiver: public Handlerable <RequestResponseFrame_Handlerable, bool> {
 
@@ -100,6 +99,94 @@ private:
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
+enum class Debugging {
+    None = 0,
+    Frames = 1 << 0,
+    Requests = 1 << 1,
+    Responses = 1 << 2,
+    Errors = 1 << 3,
+    All = Frames | Requests | Responses | Errors
+};
+enum class Capabilities {
+    None = 0,
+    Managing = 1 << 0,
+    Balancing = 1 << 1,
+    TemperatureSensing = 1 << 3,
+    RealTimeClock = 1 << 4,
+    FirmwareIndex = 1 << 5,
+    All = Managing | Balancing | TemperatureSensing | RealTimeClock | FirmwareIndex
+};
+enum class Categories {
+    None = 0,
+    Information = 1 << 0,
+    Thresholds = 1 << 1,
+    Status = 1 << 2,
+    Diagnostics = 1 << 3,
+    Commands = 1 << 4,
+    All = Information | Thresholds | Status | Diagnostics | Commands
+};
+
+template<typename T>
+struct is_flags_enum : std::false_type {};
+
+template<> struct is_flags_enum<Debugging> : std::true_type {};
+template<> struct is_flags_enum<Capabilities> : std::true_type {};
+template<> struct is_flags_enum<Categories> : std::true_type {};
+
+template<typename EnumType>
+requires is_flags_enum<EnumType>::value
+inline EnumType operator+(EnumType a, EnumType b) {
+    return static_cast<EnumType>(static_cast<int>(a) | static_cast<int>(b));
+}
+template<typename EnumType>
+requires is_flags_enum<EnumType>::value
+inline EnumType operator&(EnumType a, EnumType b) {
+    return static_cast<EnumType>(static_cast<int>(a) & static_cast<int>(b));
+}
+template<typename EnumType>
+requires is_flags_enum<EnumType>::value
+inline EnumType operator-(EnumType a, EnumType b) {
+    return static_cast<EnumType>(static_cast<int>(a) & ~static_cast<int>(b));
+}
+
+inline String toString(Debugging debugging) {
+    switch (debugging) {
+        case Debugging::None: return "None";
+        case Debugging::Requests: return "Requests";
+        case Debugging::Responses: return "Responses";
+        case Debugging::Frames: return "Frames";
+        case Debugging::All: return "All";
+        default: return "Unknown";
+    }
+}
+inline String toString(Capabilities capability) {
+    switch (capability) {
+        case Capabilities::None: return "None";
+        case Capabilities::Managing: return "Managing";
+        case Capabilities::Balancing: return "Balancing";
+        case Capabilities::TemperatureSensing: return "TemperatureSensing";
+        case Capabilities::RealTimeClock: return "RealTimeClock";
+        case Capabilities::FirmwareIndex: return "FirmwareIndex";
+        case Capabilities::All: return "All";
+        default: return "Unknown";
+    }
+}
+inline String toString(Categories category) {
+    switch (category) {
+        case Categories::None: return "None";
+        case Categories::Information: return "Information";
+        case Categories::Thresholds: return "Thresholds";
+        case Categories::Status: return "Status";
+        case Categories::Diagnostics: return "Diagnostics";
+        case Categories::Commands: return "Commands";
+        case Categories::All: return "All";
+        default: return "Unknown";
+    }
+}
+
+// -----------------------------------------------------------------------------------------------
+
+// merge into below
 class RequestResponseManager: public Handlerable <RequestResponse&, bool> {
 public:
     bool receiveFrame(const RequestResponseFrame& frame) {
@@ -133,105 +220,6 @@ public:
 };
 
 // -----------------------------------------------------------------------------------------------
-// -----------------------------------------------------------------------------------------------
-
-enum class Debugging {
-    None = 0,
-    Frames = 1 << 0,
-    Requests = 1 << 1,
-    Errors = 1 << 2,
-    All = Frames | Requests |Errors
-};
-enum class Capabilities {
-    None = 0,
-    Managing = 1 << 0,
-    Balancing = 1 << 1,
-    TemperatureSensing = 1 << 3,
-    RealTimeClock = 1 << 4,
-    FirmwareIndex = 1 << 5,
-    All = Managing | Balancing | TemperatureSensing | RealTimeClock | FirmwareIndex
-};
-enum class Categories {
-    None = 0,
-    Information = 1 << 0,
-    Thresholds = 1 << 1,
-    Status = 1 << 2,
-    Diagnostics = 1 << 3,
-    Commands = 1 << 4,
-    All = Information | Thresholds | Status | Diagnostics | Commands
-};
-
-inline Debugging operator|(Debugging a, Debugging b) {
-    return static_cast<Debugging>(static_cast<int>(a) | static_cast<int>(b));
-}
-inline Debugging operator&(Debugging a, Debugging b) {
-    return static_cast<Debugging>(static_cast<int>(a) & static_cast<int>(b));
-}
-inline Debugging operator-(Debugging a, Debugging b) {
-    return static_cast<Debugging>(static_cast<int>(a) & ~static_cast<int>(b));
-}
-inline Capabilities operator|(Capabilities a, Capabilities b) {
-    return static_cast<Capabilities>(static_cast<int>(a) | static_cast<int>(b));
-}
-inline Capabilities operator&(Capabilities a, Capabilities b) {
-    return static_cast<Capabilities>(static_cast<int>(a) & static_cast<int>(b));
-}
-inline Capabilities operator-(Capabilities a, Capabilities b) {
-    return static_cast<Capabilities>(static_cast<int>(a) & ~static_cast<int>(b));
-}
-inline Categories operator|(Categories a, Categories b) {
-    return static_cast<Categories>(static_cast<int>(a) | static_cast<int>(b));
-}
-inline Categories operator&(Categories a, Categories b) {
-    return static_cast<Categories>(static_cast<int>(a) & static_cast<int>(b));
-}
-inline Categories operator-(Categories a, Categories b) {
-    return static_cast<Categories>(static_cast<int>(a) & ~static_cast<int>(b));
-}
-inline String toString(Debugging debugging) {
-    switch (debugging) {
-        case Debugging::None: return "None";
-            case Debugging::Requests: return "Requests";
-        case Debugging::Frames: return "Frames";
-        case Debugging::All: return "All";
-        default: return "Unknown";
-    }
-}
-inline String toString(Capabilities capability) {
-    switch (capability) {
-        case Capabilities::None: return "None";
-        case Capabilities::Managing: return "Managing";
-        case Capabilities::Balancing: return "Balancing";
-        case Capabilities::TemperatureSensing: return "TemperatureSensing";
-        case Capabilities::RealTimeClock: return "RealTimeClock";
-        case Capabilities::FirmwareIndex: return "FirmwareIndex";
-        case Capabilities::All: return "All";
-        default: return "Unknown";
-    }
-}
-inline String toString(Categories category) {
-    switch (category) {
-        case Categories::None: return "None";
-        case Categories::Information: return "Information";
-        case Categories::Thresholds: return "Thresholds";
-        case Categories::Status: return "Status";
-        case Categories::Diagnostics: return "Diagnostics";
-        case Categories::Commands: return "Commands";
-        case Categories::All: return "All";
-        default: return "Unknown";
-    }
-}
-
-// -----------------------------------------------------------------------------------------------
-
-typedef struct {
-    String id;
-    Capabilities capabilities{Capabilities::None};
-    Categories categories{Categories::All};
-    Debugging debugging{Debugging::Errors};
-} Config;
-
-// -----------------------------------------------------------------------------------------------
 
 class Interface;
 void dumpDebug(const Interface&);
@@ -239,6 +227,14 @@ void dumpDebug(const Interface&);
 class Interface {
 
 public:
+
+    typedef struct {
+        String id;
+        Capabilities capabilities{Capabilities::None};
+        Categories categories{Categories::All};
+        Debugging debugging{Debugging::Errors};
+    } Config;
+
     using Capabilities = daly_bms::Capabilities;
     using Categories = daly_bms::Categories;
     using Debugging = daly_bms::Debugging;
@@ -302,37 +298,37 @@ public:
     explicit Interface(const Config& conf, Connector& connector)
         : requestResponsesSpecifications({
 
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.config },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.hardware },
+              { Categories::Information, Capabilities::Managing + Capabilities::Balancing, information.config },
+              { Categories::Information, Capabilities::Managing + Capabilities::Balancing, information.hardware },
               { Categories::Information, Capabilities::FirmwareIndex, information.firmware }, // No response, Managing or Balancing
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.software },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.battery_ratings },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.battery_code },
-              { Categories::Information, Capabilities::Managing | Capabilities::Balancing, information.battery_info },
+              { Categories::Information, Capabilities::Managing + Capabilities::Balancing, information.software },
+              { Categories::Information, Capabilities::Managing + Capabilities::Balancing, information.battery_ratings },
+              { Categories::Information, Capabilities::Managing + Capabilities::Balancing, information.battery_code },
+              { Categories::Information, Capabilities::Managing + Capabilities::Balancing, information.battery_info },
               { Categories::Information, Capabilities::Managing, information.battery_stat },
               { Categories::Information, Capabilities::RealTimeClock, information.rtc },
 
-              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.voltage },
+              { Categories::Thresholds, Capabilities::Managing + Capabilities::Balancing, thresholds.voltage },
               { Categories::Thresholds, Capabilities::Managing, thresholds.current },
               { Categories::Thresholds, Capabilities::TemperatureSensing, thresholds.sensor }, // Balancing response, but questionable
               { Categories::Thresholds, Capabilities::Managing, thresholds.charge },
-              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.cell_voltage },
+              { Categories::Thresholds, Capabilities::Managing + Capabilities::Balancing, thresholds.cell_voltage },
               { Categories::Thresholds, Capabilities::TemperatureSensing, thresholds.cell_sensor }, // Balancing response, but questionable
-              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.cell_balance },
-              { Categories::Thresholds, Capabilities::Managing | Capabilities::Balancing, thresholds.shortcircuit },
+              { Categories::Thresholds, Capabilities::Managing + Capabilities::Balancing, thresholds.cell_balance },
+              { Categories::Thresholds, Capabilities::Managing + Capabilities::Balancing, thresholds.shortcircuit },
 
               { Categories::Status, Capabilities::Managing, status.status }, // Balancing response, but voltage only
-              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.voltage },
+              { Categories::Status, Capabilities::Managing + Capabilities::Balancing, status.voltage },
               { Categories::Status, Capabilities::TemperatureSensing, status.sensor }, // Balancing response, is probably onboard sensor
               { Categories::Status, Capabilities::Managing, status.mosfet },
-              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.information },
-              { Categories::Status, Capabilities::Managing | Capabilities::Balancing, status.failure },
+              { Categories::Status, Capabilities::Managing + Capabilities::Balancing, status.information },
+              { Categories::Status, Capabilities::Managing + Capabilities::Balancing, status.failure },
 
-              { Categories::Diagnostics, Capabilities::Managing | Capabilities::Balancing, diagnostics.voltages },
+              { Categories::Diagnostics, Capabilities::Managing + Capabilities::Balancing, diagnostics.voltages },
               { Categories::Diagnostics, Capabilities::TemperatureSensing, diagnostics.sensors },
               { Categories::Diagnostics, Capabilities::Balancing, diagnostics.balances },
 
-              { Categories::Commands, Capabilities::Managing | Capabilities::Balancing, commands.reset },
+              { Categories::Commands, Capabilities::Managing + Capabilities::Balancing, commands.reset },
               { Categories::Commands, Capabilities::Managing, commands.charge },
               { Categories::Commands, Capabilities::Managing, commands.discharge }
 
@@ -341,14 +337,21 @@ public:
 
         struct ResponseHandler : RequestResponseManager::Handler {
             Interface& interface;
+            bool initialised = false;
             ResponseHandler (Interface& i): interface (i) {}
             bool handle(RequestResponse& response) override {
-                if (response.getCommand() == interface.status.information) {
+                if (!initialised && response.getCommand() == interface.status.information) {
                     interface.diagnostics.voltages.setCount(interface.status.information.numberOfCells);
                     interface.diagnostics.sensors.setCount(interface.status.information.numberOfSensors);
                     interface.diagnostics.balances.setCount(interface.status.information.numberOfCells);
-                    interface.manager.unregisterHandler(this);
-                    delete this;
+                    initialised = true;
+                    if (!interface.isEnabled (Debugging::Responses)) {
+                        interface.manager.unregisterHandler(this);
+                        delete this;
+                    }
+                }
+                if (interface.isEnabled (Debugging::Responses)) {
+                    DEBUG_PRINTF("DalyBMS<%s>: response %s -- ", interface.config.id, response.getName ()); response.debugDump(); // XXX change to toString
                 }
                 return true;
             }
@@ -380,7 +383,7 @@ public:
     void issue(RequestResponse& request) {
         if (request.isRequestable()) {
             if (isEnabled (Debugging::Requests))
-                DEBUG_PRINTF("DalyBMS<%s>: request %s\n", config.id, request.getName ().c_str ());
+                DEBUG_PRINTF("DalyBMS<%s>: request %s\n", config.id, request.getName ());
             connector.write(request.prepareRequest());
         }
     }
@@ -427,10 +430,6 @@ public:
             }
     }
 
-    void dumpDebug() const {
-        return daly_bms::dumpDebug(*this);
-    }
-
 private:
 
     std::map<Categories, std::vector<RequestResponse*>> requestResponses;
@@ -459,32 +458,4 @@ private:
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-class HardwareSerialConnector : public Interface::Connector {
-public:
-    explicit HardwareSerialConnector(HardwareSerial& serial)
-        : _serial(serial) {
-    }
-protected:
-    void begin() override {
-    }
-    bool readByte(uint8_t* byte) override {
-        if (_serial.available() > 0) {
-            *byte = _serial.read();
-            return true;
-        }
-        return false;
-    }
-    bool writeBytes(const uint8_t* data, const size_t size) override {
-        return _serial.write(data, size) == size;
-    }
-private:
-    HardwareSerial& _serial;
-};
-
-// -----------------------------------------------------------------------------------------------
-// -----------------------------------------------------------------------------------------------
-
 }    // namespace daly_bms
-
-// -----------------------------------------------------------------------------------------------
-// -----------------------------------------------------------------------------------------------

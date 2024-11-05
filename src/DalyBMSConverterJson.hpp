@@ -6,7 +6,7 @@
 #include "DalyBMSUtilities.hpp"
 #include "DalyBMSInterface.hpp"
 
-#include <Arduino.h> // for String
+#include <Arduino.h>
 #include <ArduinoJson.h>
 
 namespace daly_bms {
@@ -192,7 +192,7 @@ void addToJson(const TYPE flags, JsonArray&& arr) {
     for (TYPE flag = static_cast<TYPE>(1); flag < TYPE::All; flag = static_cast<TYPE>(static_cast<int>(flag) << 1))
         if ((flags & flag) != TYPE::None) arr.add(toString(flag));
 }
-bool convertToJson(const Config& src, JsonVariant dst) {
+bool convertToJson(const Interface::Config& src, JsonVariant dst) {
     dst["id"] = src.id;
     addToJson(src.capabilities, dst["capabilities"].to<JsonArray>());
     addToJson(src.categories, dst["categories"].to<JsonArray>());
@@ -203,161 +203,12 @@ bool convertToJson(const Config& src, JsonVariant dst) {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-namespace detail {
-    inline String toString(float v) {
-        return String(v, 3);
-    }
-    template<typename TYPE>
-    static typename std::enable_if<
-        std::disjunction<
-            std::is_same<TYPE, int8_t>,
-            std::is_same<TYPE, uint8_t>
-        >::value,
-        String>::type
-    toString(TYPE v) {
-        return String(static_cast<int>(v));
-    }
-}
-
-// -----------------------------------------------------------------------------------------------
-
-template<typename TYPE>
-void debugDump(const TYPE&) {
-    DEBUG_PRINTF("<unknown>\n");
-}
-template<uint8_t COMMAND, int LENGTH>
-void debugDump(const RequestResponse_TYPE_STRING<COMMAND, LENGTH>& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("%s\n", src.string.c_str());
-}
-template<uint8_t COMMAND, typename TYPE, int SIZE, auto DECODER>
-void debugDump(const RequestResponse_TYPE_THRESHOLD_MINMAX<COMMAND, TYPE, SIZE, DECODER>& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("max L1=%s,L2=%s, min L1=%s,L2=%s\n",    // XXX units
-                 detail::toString(src.value.L1.max).c_str(),
-                 detail::toString(src.value.L2.max).c_str(),
-                 detail::toString(src.value.L1.min).c_str(),
-                 detail::toString(src.value.L2.min).c_str());
-}
-template<uint8_t COMMAND, typename TYPE, int SIZE, auto DECODER>
-void debugDump(const RequestResponse_TYPE_VALUE_MINMAX<COMMAND, TYPE, SIZE, DECODER>& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("max=%s (#%d), min=%s (#%d)\n",    // XXX units
-                 detail::toString(src.value.max).c_str(),
-                 src.cellNumber.max,
-                 detail::toString(src.value.min).c_str(),
-                 src.cellNumber.min);
-}
-
-template<uint8_t COMMAND, typename TYPE, int SIZE, size_t ITEMS_MAX, size_t ITEMS_PER_FRAME, bool FRAMENUM, auto DECODER>
-void debugDump(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_MAX, ITEMS_PER_FRAME, FRAMENUM, DECODER>& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("%u /", src.values.size());
-    for (const auto& v : src.values)
-        DEBUG_PRINTF(" %s", detail::toString(v).c_str());    // XXX units
-    DEBUG_PRINTF("\n");
-}
-
-// -----------------------------------------------------------------------------------------------
-
-void debugDump(const RequestResponse_BMS_CONFIG& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("boards=%d, cells=%d,%d,%d, sensors=%d,%d,%d\n",
-                 src.boards,
-                 src.cells[0], src.cells[1], src.cells[2],
-                 src.sensors[0], src.sensors[1], src.sensors[2]);
-}
-void debugDump(const RequestResponse_BATTERY_RATINGS& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("packCapacity=%.1fAh, nominalCellVoltage=%.1fV\n",
-                 src.packCapacityAh, src.nominalCellVoltage);
-}
-void debugDump(const RequestResponse_BATTERY_STAT& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("cumulativeCharge=%.1fAh, cumulativeDischarge=%.1fAh\n",
-                 src.cumulativeChargeAh, src.cumulativeDischargeAh);
-}
-void debugDump(const RequestResponse_BATTERY_INFO& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("mode=%s, type=%s, date=%s, sleep=%d, unknown 1=%d, 2=%d\n",
-                 toString (src.mode).c_str (), toString (src.type).c_str (),
-                 src.productionDate.toString().c_str(),
-                 src.automaticSleepSec,
-                 src.unknown1, src.unknown2);
-}
-void debugDump(const RequestResponse_THRESHOLDS_SENSOR& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("charge max L1=%dC,L2=%dC min L1=%dC,L2=%dC, discharge max L1=%dC,L2=%dC min L1=%dC,L2=%dC\n",
-                 src.charge.L1.max, src.charge.L2.max,
-                 src.charge.L1.min, src.charge.L2.min,
-                 src.discharge.L1.max, src.discharge.L2.max,
-                 src.discharge.L1.min, src.discharge.L2.min);
-}
-void debugDump(const RequestResponse_THRESHOLDS_CELL_SENSOR& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("voltage diff L1=%.3fV,L2=%.3fV, temperature diff L1=%dC,L2=%dC\n",
-                 src.voltage.L1, src.voltage.L2,
-                 src.temperature.L1, src.temperature.L2);
-}
-void debugDump(const RequestResponse_THRESHOLDS_CELL_BALANCE& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("voltage enable=%.3fV, acceptable=%.3fV\n",
-                 src.voltageEnableThreshold,
-                 src.voltageAcceptableDifference);
-}
-void debugDump(const RequestResponse_THRESHOLDS_SHORTCIRCUIT& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("shutdown=%.1fA, sampling=%.3fR\n",
-                 src.currentShutdownA, src.currentSamplingR);
-}
-void debugDump(const RequestResponse_BMS_RTC& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("%s\n", toString (src.date, src.time).c_str ());
-}
-void debugDump(const RequestResponse_STATUS& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("%.1f volts, %.1f amps, %.1f percent\n",
-                 src.voltage, src.current, src.charge);
-}
-void debugDump(const RequestResponse_MOSFET& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("state=%s, MOS charge=%s, discharge=%s, cycle=%d, capacity=%.1fAh\n",
-                 toString(src.state).c_str(),
-                 src.mosChargeState ? "on" : "off",
-                 src.mosDischargeState ? "on" : "off",
-                 src.bmsLifeCycle,
-                 src.residualCapacityAh);
-}
-void debugDump(const RequestResponse_INFORMATION& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("cells=%d, sensors=%d, charger=%s, load=%s, cycles=%d\n",
-                 src.numberOfCells, src.numberOfSensors,
-                 src.chargerStatus ? "on" : "off",
-                 src.loadStatus ? "on" : "off",
-                 src.cycles);
-}
-void debugDump(const RequestResponse_FAILURE& src) {
-    if (!src.isValid()) return;
-    DEBUG_PRINTF("show=%s, count=%d", src.show ? "yes" : "no", src.count);
-    if (src.count > 0) {
-        DEBUG_PRINTF(", active=[");
-        const char* failures[src.count];
-        for (size_t i = 0, c = src.getFailureList(failures, src.count); i < c; i++)
-            DEBUG_PRINTF("%s%s", i == 0 ? "" : ",", failures[i]);
-        DEBUG_PRINTF("]");
-    }
-    DEBUG_PRINTF("\n");
-}
-
-// -----------------------------------------------------------------------------------------------
-// -----------------------------------------------------------------------------------------------
-
 bool convertToJson(const Interface& src, JsonVariant dst) {
 
-    const auto convertConfig = [&](const Config& config) {
+    const auto convertConfig = [&](const Interface::Config& config) {
         dst["config"] = config;
     };
-    const auto convertCategory = [&](const Config& config, const Categories category) -> JsonVariant {
+    const auto convertCategory = [&](const Interface::Config& config, const Categories category) -> JsonVariant {
         return dst[toString(category)];
     };
     const auto convertElement = [&](auto&& handler, const auto& component) {
@@ -405,69 +256,6 @@ bool convertToJson(const Interface& src, JsonVariant dst) {
         convertElement(diagnostics, src.diagnostics.balances);
     }
     return true;
-}
-
-void dumpDebug(const Interface& src) {
-
-    const auto convertConfig = [&](const Config& config) {
-        DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s, debugging=%s\n", 
-        config.id, toStringBitwise(config.capabilities).c_str (), toStringBitwise(config.categories).c_str (), toStringBitwise(config.debugging).c_str ());
-    };
-    const auto convertCategory = [&](const Config& config, const Categories category) -> String {
-        DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id, toString(category).c_str ());
-        return toString(category);
-    };
-    const auto convertElement = [&](auto&&, const auto& component) {
-        if (!src.isEnabled(&component)) return false;
-        if (component.isValid()) {
-            DEBUG_PRINTF("  %s: <%lu> ", getName(component), systemSecsSince (component.valid ()));
-            debugDump(component);
-            return true;
-        } else { 
-            DEBUG_PRINTF("  %s: <Not valid>\n", getName(component));
-            return false;
-        }
-    };
-
-    convertConfig(src.getConfig ());
-    if (src.isEnabled(Categories::Information)) {
-        auto information = convertCategory(src.getConfig (), Categories::Information);
-        convertElement(information, src.information.config);
-        convertElement(information, src.information.hardware);
-        convertElement(information, src.information.firmware);
-        convertElement(information, src.information.software);
-        convertElement(information, src.information.battery_ratings);
-        convertElement(information, src.information.battery_code);
-        convertElement(information, src.information.battery_info);
-        convertElement(information, src.information.battery_stat);
-        convertElement(information, src.information.rtc);
-    }
-    if (src.isEnabled(Categories::Thresholds)) {
-        auto thresholds = convertCategory(src.getConfig (), Categories::Thresholds);
-        convertElement(thresholds, src.thresholds.voltage);
-        convertElement(thresholds, src.thresholds.current);
-        convertElement(thresholds, src.thresholds.sensor);
-        convertElement(thresholds, src.thresholds.charge);
-        convertElement(thresholds, src.thresholds.cell_voltage);
-        convertElement(thresholds, src.thresholds.cell_sensor);
-        convertElement(thresholds, src.thresholds.cell_balance);
-        convertElement(thresholds, src.thresholds.shortcircuit);
-    }
-    if (src.isEnabled(Categories::Status)) {
-        auto status = convertCategory(src.getConfig (), Categories::Status);
-        convertElement(status, src.status.status);
-        convertElement(status, src.status.voltage);
-        convertElement(status, src.status.sensor);
-        convertElement(status, src.status.mosfet);
-        convertElement(status, src.status.information);
-        convertElement(status, src.status.failure);
-    }
-    if (src.isEnabled(Categories::Diagnostics)) {
-        auto diagnostics = convertCategory(src.getConfig (), Categories::Diagnostics);
-        convertElement(diagnostics, src.diagnostics.voltages);
-        convertElement(diagnostics, src.diagnostics.sensors);
-        convertElement(diagnostics, src.diagnostics.balances);
-    }
 }
 
 // -----------------------------------------------------------------------------------------------

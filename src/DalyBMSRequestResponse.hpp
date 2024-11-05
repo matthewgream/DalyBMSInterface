@@ -200,9 +200,8 @@ public:
             return processResponseFrame(frame, _responsesReceived);
         else return false;
     }
-    String getName () const {
-        return demangle (typeid(*this).name());
-    }
+    virtual const char * getName() const = 0;
+    virtual void debugDump() const = 0;
 protected:
     bool setValid(const bool v = true) {
         if ((_validState = v)) _validTime = systemTicksNow ();
@@ -226,6 +225,3 @@ private:
 // -----------------------------------------------------------------------------------------------
 
 } // namespace daly_bms
-
-// -----------------------------------------------------------------------------------------------
-// -----------------------------------------------------------------------------------------------
