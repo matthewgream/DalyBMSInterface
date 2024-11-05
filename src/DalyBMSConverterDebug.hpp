@@ -16,7 +16,7 @@ namespace daly_bms {
 void debugDump(const Interface& src) {
 
     const auto convertConfig = [&](const Interface::Config& config) {
-        DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s, debugging=%s\n", 
+        DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s, debugging=%s\n",
         config.id, toStringBitwise(config.capabilities).c_str (), toStringBitwise(config.categories).c_str (), toStringBitwise(config.debugging).c_str ());
     };
     const auto convertCategory = [&](const Interface::Config& config, const Categories category) -> String {
@@ -29,7 +29,7 @@ void debugDump(const Interface& src) {
             DEBUG_PRINTF("  %s: <%lu> ", getName(component), systemSecsSince (component.valid ()));
             component.debugDump();
             return true;
-        } else { 
+        } else {
             DEBUG_PRINTF("  %s: <Not valid>\n", getName(component));
             return false;
         }

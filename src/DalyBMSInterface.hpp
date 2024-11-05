@@ -57,7 +57,7 @@ protected:
     };
     void readStateStart() {
         _readState = ReadState::WaitingForStart;
-        _readOffset = RequestResponseFrame::Constants::OFFSET_BYTE_START;  
+        _readOffset = RequestResponseFrame::Constants::OFFSET_BYTE_START;
     }
     bool readStateWaitingForStart(uint8_t byte) {
         if (byte == RequestResponseFrame::Constants::VALUE_BYTE_START) {
@@ -338,7 +338,7 @@ public:
         struct ResponseHandler : RequestResponseManager::Handler {
             Interface& interface;
             bool initialised = false;
-            ResponseHandler (Interface& i): interface (i) {}
+            explicit ResponseHandler (Interface& i): interface (i) {}
             bool handle(RequestResponse& response) override {
                 if (!initialised && response.getCommand() == interface.status.information) {
                     interface.diagnostics.voltages.setCount(interface.status.information.numberOfCells);
@@ -360,7 +360,7 @@ public:
 
         struct FrameHandler: RequestResponseFrame::Receiver::Handler {
             Interface& interface;
-            FrameHandler (Interface& i): interface (i) {}
+            explicit FrameHandler (Interface& i): interface (i) {}
             bool handle (RequestResponseFrame::Receiver::Handler::Type frame) {
                 if (interface.isEnabled (Debugging::Frames) || interface.isEnabled (Debugging::Errors) && frame.second == Direction::Error)
                     DEBUG_PRINTF("DalyBMS<%s>: %s: %s\n", interface.config.id, toString (frame.second), frame.first.toString().c_str());

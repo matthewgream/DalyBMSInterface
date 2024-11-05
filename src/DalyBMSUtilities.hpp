@@ -68,7 +68,7 @@ protected:
     typename std::enable_if<!std::is_void<R>::value, R>::type
     notifyHandlers(T t) {
         R result{};
-        for (auto handler : _handlers) 
+        for (auto handler : _handlers)
             if ((result = handler->handle(t)))
                 break;
         return result;

@@ -10,7 +10,7 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-namespace daly_bms { 
+namespace daly_bms {
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
@@ -60,8 +60,8 @@ public:
     }
 
     bool valid() const {
-        return _data[Constants::OFFSET_BYTE_START] == Constants::VALUE_BYTE_START && 
-        _data[Constants::OFFSET_ADDRESS] == Constants::VALUE_ADDRESS_BMS_MASTER && 
+        return _data[Constants::OFFSET_BYTE_START] == Constants::VALUE_BYTE_START &&
+        _data[Constants::OFFSET_ADDRESS] == Constants::VALUE_ADDRESS_BMS_MASTER &&
         _data[Constants::OFFSET_SIZE] == Constants::SIZE_DATA && _data[Constants::OFFSET_CHECKSUM] == calculateChecksum();
     }
 

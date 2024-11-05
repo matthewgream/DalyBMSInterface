@@ -116,23 +116,23 @@ void setup() {
 
     DalyBMSInstances::Config* config = new DalyBMSInstances::Config{
         .instances = std::vector<daly_bms::Instance::Config>{
-            daly_bms::Instance::Config{ 
+            daly_bms::Instance::Config{
                 .daly = {
                     .id = MANAGER_NAME,
-                    .capabilities = daly_bms::Capabilities::Managing  + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex - daly_bms::Capabilities::RealTimeClock,
+                    .capabilities = daly_bms::Capabilities::Managing + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex - daly_bms::Capabilities::RealTimeClock,
                     .categories = daly_bms::Categories::All,
                     .debugging = daly_bms::Debugging::Errors + daly_bms::Debugging::Requests + daly_bms::Debugging::Responses,
                 },
-                .serialId = MANAGER_ID, .serialRxPin = MANAGER_PIN_RX, .serialTxPin = MANAGER_PIN_TX, .enPin = MANAGER_PIN_EN 
+                .serialId = MANAGER_ID, .serialRxPin = MANAGER_PIN_RX, .serialTxPin = MANAGER_PIN_TX, .enPin = MANAGER_PIN_EN
             },
-            daly_bms::Instance::Config{ 
-                .daly = { 
-                    .id = BALANCE_NAME, 
-                    .capabilities = daly_bms::Capabilities::Balancing + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex, 
+            daly_bms::Instance::Config{
+                .daly = {
+                    .id = BALANCE_NAME,
+                    .capabilities = daly_bms::Capabilities::Balancing + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex,
                     .categories = daly_bms::Categories::All,
                     .debugging = daly_bms::Debugging::Errors + daly_bms::Debugging::Requests + daly_bms::Debugging::Responses,
-                }, 
-                .serialId = BALANCE_ID, .serialRxPin = BALANCE_PIN_RX, .serialTxPin = BALANCE_PIN_TX, .enPin = BALANCE_PIN_EN 
+                },
+                .serialId = BALANCE_ID, .serialRxPin = BALANCE_PIN_RX, .serialTxPin = BALANCE_PIN_TX, .enPin = BALANCE_PIN_EN
             }
         }
     };

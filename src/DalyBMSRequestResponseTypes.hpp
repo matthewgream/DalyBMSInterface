@@ -13,7 +13,7 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-namespace daly_bms { 
+namespace daly_bms {
 
 namespace detail {
     inline String toString(float v) {
@@ -385,12 +385,12 @@ protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
         return setValid( // XXX should be template
             FrameContentDecoder::decode_Temperature(frame, 0, &charge.L1.max) &&
-             FrameContentDecoder::decode_Temperature(frame, 1, &charge.L2.max) && 
-             FrameContentDecoder::decode_Temperature(frame, 2, &charge.L1.min) && 
-             FrameContentDecoder::decode_Temperature(frame, 3, &charge.L2.min) && 
-             FrameContentDecoder::decode_Temperature(frame, 4, &discharge.L1.max) && 
+             FrameContentDecoder::decode_Temperature(frame, 1, &charge.L2.max) &&
+             FrameContentDecoder::decode_Temperature(frame, 2, &charge.L1.min) &&
+             FrameContentDecoder::decode_Temperature(frame, 3, &charge.L2.min) &&
+             FrameContentDecoder::decode_Temperature(frame, 4, &discharge.L1.max) &&
              FrameContentDecoder::decode_Temperature(frame, 5, &discharge.L2.max) &&
-             FrameContentDecoder::decode_Temperature(frame, 6, &discharge.L1.min) && 
+             FrameContentDecoder::decode_Temperature(frame, 6, &discharge.L1.min) &&
              FrameContentDecoder::decode_Temperature(frame, 7, &discharge.L2.min));
     }
 };
@@ -417,7 +417,7 @@ public:
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
         return setValid(  // XXX should be template
-            FrameContentDecoder::decode_Voltage_m(frame, 0, &voltage.L1) && FrameContentDecoder::decode_Voltage_m(frame, 2, &voltage.L2) && 
+            FrameContentDecoder::decode_Voltage_m(frame, 0, &voltage.L1) && FrameContentDecoder::decode_Voltage_m(frame, 2, &voltage.L2) &&
             FrameContentDecoder::decode_Temperature(frame, 4, &temperature.L1) && FrameContentDecoder::decode_Temperature(frame, 5, &temperature.L2));
     }
 };
@@ -509,8 +509,8 @@ public:
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
         return setValid(
-            FrameContentDecoder::decode_Voltage_d(frame, 0, &voltage) && 
-            FrameContentDecoder::decode_Current_d(frame, 4, &current) && 
+            FrameContentDecoder::decode_Voltage_d(frame, 0, &voltage) &&
+            FrameContentDecoder::decode_Current_d(frame, 4, &current) &&
             FrameContentDecoder::decode_Percent_d(frame, 6, &charge));
     }
 };
@@ -537,9 +537,9 @@ public:
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
         return setValid( // XXX should be template
-            DECODER(frame, 0, &value.max) && 
-            FrameContentDecoder::decode(frame, SIZE, &cellNumber.max) && 
-            DECODER(frame, SIZE + 1, &value.min) && 
+            DECODER(frame, 0, &value.max) &&
+            FrameContentDecoder::decode(frame, SIZE, &cellNumber.max) &&
+            DECODER(frame, SIZE + 1, &value.min) &&
             FrameContentDecoder::decode(frame, SIZE + 1 + SIZE, &cellNumber.min));
     }
 };

@@ -35,7 +35,7 @@ struct Instance {
     Connector connector;
     Interface interface;
 
-    Instance(const Config& conf)
+    explicit Instance(const Config& conf)
         : config(conf), hardware(config.serialId), connector(hardware), interface(config.daly, connector) {
         hardware.setRxBufferSize(config.serialBufferRx);
         hardware.setTxBufferSize(config.serialBufferTx);
@@ -70,7 +70,7 @@ private:
     std::vector<Interface*> interfaces{};
 
 public:
-    Instances(const Config& conf)
+    explicit Instances(const Config& conf)
         : config(conf) {}
     ~Instances() {
         end();
@@ -121,10 +121,10 @@ public:
         forEachInterface<&Interface::requestDiagnostics>();
     }
     void debugDump() const {
-        for (auto& instance : instances) {
+        for (const auto& instance : instances) {
             const auto& config = instance->config;
             DEBUG_PRINTF ("INSTANCE: serial id=%d pin rx=%d, tx=%d, en=%d, config=%08X, bufferRx=%d, bufferTx=%d, baud=%d, config=%d\n",
-                config.serialId, config.serialRxPin, config.serialTxPin, config.enPin, config.serialConfig, 
+                config.serialId, config.serialRxPin, config.serialTxPin, config.enPin, config.serialConfig,
                 config.serialBufferRx, config.serialBufferTx, config.serialBaud, config.serialConfig);
            daly_bms::debugDump (instance->interface);
         }
@@ -135,7 +135,6 @@ public:
     //     serial ["id"] = config.serialId;
     //     JsonObject pins = serial["pinx"].to<JsonObject>();
     //     pins ["rx"] = config.serialRxPin;
-
 
     //         JsonArray dioStates = dst["dioStates"].to<JsonArray>();
     // for (const auto& state : src.dioStates)
