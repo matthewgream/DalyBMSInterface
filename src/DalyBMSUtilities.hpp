@@ -119,25 +119,6 @@ inline String toStringBitwise(T bits) {
 }
 
 // -----------------------------------------------------------------------------------------------
-
-#include <type_traits>
-#include <exception>
-#include <utility>
-
-void exception_catcher(
-    std::function<void()> f, std::function<void()> g = []() {}) {
-    try {
-        f();
-    } catch (const std::exception& e) {
-        DEBUG_PRINTF("exception: %s\n", e.what());
-        g();
-    } catch (...) {
-        DEBUG_PRINTF("exception: unknown\n");
-        g();
-    }
-}
-
-// -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
 } // namespace daly_bms

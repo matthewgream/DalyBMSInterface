@@ -49,7 +49,7 @@ void testRaw() {
     const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
     HardwareSerial* serial;
 
-    daly_bms::exception_catcher([&] {
+    try {
         HardwareSerial serial(serialId);
         serial.begin(daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_BAUD, daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
         if (enPin >= 0) digitalWrite(enPin, HIGH);
@@ -64,7 +64,11 @@ void testRaw() {
             DEBUG_PRINTF("*\n");
             delay(5000);
         }
-    });
+    } catch (const std::exception& e) {
+        DEBUG_PRINTF("exception: %s\n", e.what());
+    } catch (...) {
+        DEBUG_PRINTF("exception: unknown\n");
+    }
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -145,14 +149,18 @@ void setup() {
 }
 
 void loop() {
-    daly_bms::exception_catcher([&] {
+    try {
         DEBUG_PRINTF("*** LOOP\n");
         if (requestStatus) dalyInstances->requestStatus();
         if (requestDiagnostics) dalyInstances->requestDiagnostics(), dalyInstances->updateInitial();
         processInterval.wait();
         dalyInstances->process();
         // if (reportData) dalyInstances->debugDump();
-    });
+    } catch (const std::exception& e) {
+        DEBUG_PRINTF("exception: %s\n", e.what());
+    } catch (...) {
+        DEBUG_PRINTF("exception: unknown\n");
+    }
 }
 
 // -----------------------------------------------------------------------------------------------

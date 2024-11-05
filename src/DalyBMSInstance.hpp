@@ -78,20 +78,18 @@ public:
 
     bool begin() {
         bool began = false;
-        exception_catcher(
-            [&] {
-                for (auto& configInstance : config.instances) {
-                    std::shared_ptr <Instance> instance = std::make_shared<Instance>(configInstance);
-                    instances.push_back(instance);
-                    interfaces.push_back(&instance->interface);
-                    instance->interface.requestInitial ();
-                    instance->interface.requestStatus ();
-                }
-                began = true;
-            },
-            [&] {
-                end();
-            });
+        try {
+            for (auto& configInstance : config.instances) {
+                std::shared_ptr <Instance> instance = std::make_shared<Instance>(configInstance);
+                instances.push_back(instance);
+                interfaces.push_back(&instance->interface);
+                instance->interface.requestInitial ();
+                instance->interface.requestStatus ();
+            }
+            began = true;
+        } catch (...) {
+            end();
+        }
         return began;
     }
 
