@@ -388,6 +388,10 @@ public:
             connector.write(request.prepareRequest());
         }
     }
+    void requestInstant() {
+        if (!isEnabled(Categories::Status)) return;
+        issue (status.status);
+    }
     void requestStatus() {
         request(Categories::Status);
     }

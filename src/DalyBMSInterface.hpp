@@ -115,6 +115,9 @@ public:
     void updateInitial() {
         forEachManager<&Manager::updateInitial>();
     }
+    void requestInstant() {
+        forEachManager<&Manager::requestInstant>();
+    }
     void requestStatus() {
         forEachManager<&Manager::requestStatus>();
     }
