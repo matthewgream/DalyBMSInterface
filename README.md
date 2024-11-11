@@ -7,7 +7,7 @@ It is not officially supported not assisted. It is clean room built from scratch
 
 The design and implementation is modular and extensible using modern C++. It supports multiple manager instances with capability/category selectivity of commands. For now, there are only reads and selected commands, not writes. 
 
-There did not exist any useful and reliable and comprehensive software interface, and I was not satisfied with the reliability of the WiFi and Bluetooth dongles for the BMS. In addition, the clunky product has a separate balancer with duplicated voltage detection wiring with two separate serial intefaces: the results are "combined" in the Daly BMS App. The best I could find was the so called "open" DalyBMS WiFi dongle, but it was not suited to my needs and the author would not share any Daly interface code.
+There did not exist any useful and reliable and comprehensive software interface, and I was not satisfied with the reliability of the WiFi and Bluetooth dongles for the BMS. In addition, the clunky product has a separate balancer with duplicated voltage detection wiring with two separate serial intefaces: the results are "combined" in the Daly BMS App. The best I could find was the so called "open" DalyBMS WiFi dongle, but it was not suited to my needs and the author would not share any Daly interface code (even though he extensively relies on open source).
 
 ### License
 
