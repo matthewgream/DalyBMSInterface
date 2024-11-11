@@ -59,7 +59,7 @@ struct FrameTypeDateHMS {
         return (hours < 10 ? "0" : "") + String(hours) + (minutes < 10 ? "0" : "") + String(minutes) + (seconds < 10 ? "0" : "") + String(seconds);
     }
 };
-String toString (const FrameTypeDateYMD& date, const FrameTypeDateHMS& time) {
+STATIC_IF_ARDUINO_IDE String toString (const FrameTypeDateYMD& date, const FrameTypeDateHMS& time) {
     return String("20") + (date.year < 10 ? "0" : "") + String(date.year) + (date.month < 10 ? "/0" : "/") + String(date.month) + (date.day < 10 ? "/0" : "/") + String(date.day) +
         String ('T') +
         (time.hours < 10 ? "0" : "") + String(time.hours) + (time.minutes < 10 ? ":0" : ":") + String(time.minutes) + (time.seconds < 10 ? ":0" : ":") + String(time.seconds);
@@ -279,14 +279,14 @@ protected:
 // -----------------------------------------------------------------------------------------------
 
 enum class OperationalMode : uint8_t { LongPressPowerOnOff = 0x01 };
-String toString(const OperationalMode operationalMode) {
+STATIC_IF_ARDUINO_IDE String toString(const OperationalMode operationalMode) {
     switch (operationalMode) {
         case OperationalMode::LongPressPowerOnOff: return "long-press power-on/off";
         default: return String ("0x") + String (static_cast <uint8_t> (operationalMode), HEX);
     }
 }
 enum class BatteryType : uint8_t { LithiumIon = 0x01 };
-String toString(const BatteryType batteryType) {
+STATIC_IF_ARDUINO_IDE String toString(const BatteryType batteryType) {
     switch (batteryType) {
         case BatteryType::LithiumIon: return "lithium-ion";
         default: return String ("0x") + String (static_cast <uint8_t> (batteryType), HEX);
@@ -558,7 +558,7 @@ template<>constexpr const char* RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 
 // -----------------------------------------------------------------------------------------------
 
 enum class ChargeState : uint8_t { Stationary = 0x00, Charge = 0x01, Discharge = 0x02 };
-String toString(const ChargeState state) {
+STATIC_IF_ARDUINO_IDE String toString(const ChargeState state) {
     switch (state) {
         case ChargeState::Stationary: return "stationary";
         case ChargeState::Charge: return "charge";

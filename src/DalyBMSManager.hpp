@@ -352,7 +352,7 @@ public:
                     }
                 }
                 if (manager.isEnabled (Debugging::Responses)) {
-                    DEBUG_PRINTF("DalyBMS<%s>: response %s -- ", manager.config.id, response.getName ()); response.debugDump(); // XXX change to toString
+                    DEBUG_PRINTF("DalyBMS<%s>: response %s -- ", manager.config.id.c_str(), response.getName ()); response.debugDump(); // XXX change to toString
                 }
                 return true;
             }
@@ -364,7 +364,7 @@ public:
             explicit FrameHandler (Manager& i): manager (i) {}
             bool handle (RequestResponseFrame::Receiver::Handler::Type frame) {
                 if (manager.isEnabled (Debugging::Frames) || (manager.isEnabled (Debugging::Errors) && frame.second == Direction::Error))
-                    DEBUG_PRINTF("DalyBMS<%s>: %s: %s\n", manager.config.id, toString (frame.second), frame.first.toString().c_str());
+                    DEBUG_PRINTF("DalyBMS<%s>: %s: %s\n", manager.config.id.c_str (), toString (frame.second).c_str (), frame.first.toString().c_str());
                 if (frame.second == Direction::Receive)
                     manager.manager.receiveFrame(frame.first);
                 return frame.second == Direction::Receive;
@@ -374,7 +374,7 @@ public:
     }
 
     void begin() {
-        DEBUG_PRINTF("DalyBMS<%s>: begin\n", config.id);
+        DEBUG_PRINTF("DalyBMS<%s>: begin\n", config.id.c_str());
         connector.begin();
     }
     void process() {
@@ -384,7 +384,7 @@ public:
     void issue(RequestResponse& request) {
         if (request.isRequestable()) {
             if (isEnabled (Debugging::Requests))
-                DEBUG_PRINTF("DalyBMS<%s>: request %s\n", config.id, request.getName ());
+                DEBUG_PRINTF("DalyBMS<%s>: request %s\n", config.id.c_str(), request.getName ());
             connector.write(request.prepareRequest());
         }
     }
@@ -399,7 +399,7 @@ public:
         request(Categories::Diagnostics);
     }
     void requestInitial() {
-        DEBUG_PRINTF("DalyBMS<%s>: requestInitial\n", config.id);
+        DEBUG_PRINTF("DalyBMS<%s>: requestInitial\n", config.id.c_str ());
         for (auto category : { Categories::Information, Categories::Thresholds })
             request(category);
     }
@@ -418,7 +418,7 @@ protected:
 public:
     void request(const Categories category) {
         if (!isEnabled(category)) return;
-        DEBUG_PRINTF("DalyBMS<%s>: request%s\n", config.id, toString(category).c_str());
+        DEBUG_PRINTF("DalyBMS<%s>: request%s\n", config.id.c_str(), toString(category).c_str());
         auto it = requestResponses.find(category);
         if (it != requestResponses.end())
             for (auto r : it->second)
@@ -426,7 +426,7 @@ public:
     }
     void update(const Categories category) {
         if (!isEnabled(category)) return;
-        DEBUG_PRINTF("DalyBMS<%s>: update%s\n", config.id, toString(category).c_str());
+        DEBUG_PRINTF("DalyBMS<%s>: update%s\n", config.id.c_str (), toString(category).c_str());
         auto it = requestResponses.find(category);
         if (it != requestResponses.end())
             for (auto r : it->second) {

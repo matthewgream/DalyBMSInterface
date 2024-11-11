@@ -14,14 +14,14 @@ namespace daly_bms {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-void debugDump(const Manager& src) {
+STATIC_IF_ARDUINO_IDE void debugDump(const Manager& src) {
 
     const auto convertConfig = [&](const Manager::Config& config) {
         DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s, debugging=%s\n",
-        config.id, toStringBitwise(config.capabilities).c_str (), toStringBitwise(config.categories).c_str (), toStringBitwise(config.debugging).c_str ());
+        config.id.c_str(), toStringBitwise(config.capabilities).c_str (), toStringBitwise(config.categories).c_str (), toStringBitwise(config.debugging).c_str ());
     };
     const auto convertCategory = [&](const Manager::Config& config, const Categories category) -> String {
-        DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id, toString(category).c_str ());
+        DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id.c_str (), toString(category).c_str ());
         return toString(category);
     };
     const auto convertElement = [&](auto&&, const auto& component) {

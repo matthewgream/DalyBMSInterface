@@ -34,6 +34,12 @@
 
 #endif
 
+#ifndef PLATFORMIO
+#define STATIC_IF_ARDUINO_IDE static
+#else
+#define STATIC_IF_ARDUINO_IDE
+#endif
+
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
@@ -110,10 +116,10 @@ String BytesToHexString(const uint8_t bytes[], const char* separator = ":") {
 #include <Arduino.h>
 
 typedef unsigned long SystemTicks_t;
-SystemTicks_t systemTicksNow () {
+STATIC_IF_ARDUINO_IDE inline SystemTicks_t systemTicksNow () {
     return millis ();
 }
-unsigned long systemSecsSince(SystemTicks_t ticks) {
+STATIC_IF_ARDUINO_IDE inline unsigned long systemSecsSince(SystemTicks_t ticks) {
     return (millis () - ticks) / 1000;
 }
 

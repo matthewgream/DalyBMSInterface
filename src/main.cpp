@@ -1,4 +1,5 @@
-#ifdef DALYBMS_STANDALONE
+
+#if defined(DALYBMS_STANDALONE) || !defined(PLATFORMIO)
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
@@ -59,12 +60,11 @@ static constexpr const char* BALANCE_NAME = "balance";
 void testRaw() {
 
     const int serialId = MANAGER_ID, serialRxPin = MANAGER_PIN_RX, serialTxPin = MANAGER_PIN_TX, enPin = MANAGER_PIN_EN;
-    HardwareSerial* serial;
 
     try {
         HardwareSerial serial(serialId);
         serial.begin(daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_BAUD, daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
-        if (enPin >= 0) digitalWrite(enPin, HIGH);
+        if (enPin >= 0) digitalWrite(enPin, LOW);
 
         while (1) {
             uint8_t command [13] = { 0xA5, 0x40 , 0x90 , 0x08 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x7D };
@@ -94,6 +94,7 @@ void testOne() {
 
     HardwareSerial serial (serialId);
     serial.begin(daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_BAUD, daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
+    if (enPin >= 0) digitalWrite(enPin, LOW);
     daly_bms::HardwareSerialConnector connector (serial);
     daly_bms::Manager manager (config, connector);
     manager.begin ();
@@ -119,7 +120,7 @@ Intervalable processInterval (5 * 1000), requestStatus(15 * 1000), requestDiagno
 
 daly_bms::Interfaces* dalyInterfaces{nullptr};
 
-void setup() {
+void dalybms_setup() {
 
     delay(5 * 1000);
     DEBUG_START();
@@ -160,7 +161,7 @@ void setup() {
 
 }
 
-void loop() {
+void dalybms_loop() {
     try {
         DEBUG_PRINTF("*** LOOP\n");
         if (requestStatus) dalyInterfaces->requestStatus();
@@ -175,7 +176,12 @@ void loop() {
     }
 }
 
+#ifdef PLATFORMIO
+void setup () { dalybms_setup(); }
+void loop () { dalybms_loop(); }
+#endif
+
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#endif
+#endif // DALYBMS_STANDALONE PLATFORMIO

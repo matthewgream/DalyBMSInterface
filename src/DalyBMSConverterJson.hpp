@@ -77,7 +77,7 @@ bool convertToJson(const RequestResponse_TYPE_ARRAY<COMMAND, TYPE, SIZE, ITEMS_M
 
 // -----------------------------------------------------------------------------------------------
 
-bool convertToJson(const RequestResponse_BMS_CONFIG& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BMS_CONFIG& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["boards"] = src.boards;
     JsonArray cells = dst["cells"].to<JsonArray>();
@@ -86,13 +86,13 @@ bool convertToJson(const RequestResponse_BMS_CONFIG& src, JsonVariant dst) {
         cells.add(src.cells[i]), sensors.add(src.sensors[i]);
     return true;
 }
-bool convertToJson(const RequestResponse_BATTERY_RATINGS& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BATTERY_RATINGS& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["packCapacityAh"] = src.packCapacityAh;
     dst["nominalCellVoltage"] = src.nominalCellVoltage;
     return true;
 }
-bool convertToJson(const RequestResponse_BATTERY_INFO& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BATTERY_INFO& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["operationalMode"] = toString (src.mode);
     dst["type"] = toString (src.type);
@@ -100,18 +100,18 @@ bool convertToJson(const RequestResponse_BATTERY_INFO& src, JsonVariant dst) {
     dst["automaticSleepSec"] = src.automaticSleepSec;
     return true;
 }
-bool convertToJson(const RequestResponse_BATTERY_STAT& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BATTERY_STAT& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["cumulativeChargeAh"] = src.cumulativeChargeAh;
     dst["cumulativeDischargeAh"] = src.cumulativeDischargeAh;
     return true;
 }
-bool convertToJson(const RequestResponse_BMS_RTC& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BMS_RTC& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst.set (toString (src.date, src.time));
     return true;
 }
-bool convertToJson(const RequestResponse_THRESHOLDS_SENSOR& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_SENSOR& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst ["charge"] = src.charge;
     dst ["discharge"] = src.discharge;
@@ -127,32 +127,32 @@ bool convertToJson(const RequestResponse_THRESHOLDS_SENSOR& src, JsonVariant dst
     // discharge["minL2"] = src.dischargeMinL2;
     return true;
 }
-bool convertToJson(const RequestResponse_THRESHOLDS_CELL_SENSOR& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_CELL_SENSOR& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst ["voltageDiff"] = src.voltage;
     dst ["temperatureDiff"] = src.temperature;
     return true;
 }
-bool convertToJson(const RequestResponse_THRESHOLDS_CELL_BALANCE& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_CELL_BALANCE& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["voltageEnableThreshold"] = src.voltageEnableThreshold;
     dst["voltageAcceptableDifferential"] = src.voltageAcceptableDifference;
     return true;
 }
-bool convertToJson(const RequestResponse_THRESHOLDS_SHORTCIRCUIT& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_SHORTCIRCUIT& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["currentShutdownA"] = src.currentShutdownA;
     dst["currentSamplingR"] = src.currentSamplingR;
     return true;
 }
-bool convertToJson(const RequestResponse_STATUS& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_STATUS& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["voltage"] = src.voltage;
     dst["current"] = src.current;
     dst["charge"] = src.charge;
     return true;
 }
-bool convertToJson(const RequestResponse_MOSFET& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_MOSFET& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["state"] = toString(src.state);
     dst["mosChargeState"] = src.mosChargeState;
@@ -161,7 +161,7 @@ bool convertToJson(const RequestResponse_MOSFET& src, JsonVariant dst) {
     dst["residualCapacityAh"] = src.residualCapacityAh;
     return true;
 }
-bool convertToJson(const RequestResponse_INFORMATION& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_INFORMATION& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["cells"] = src.numberOfCells;
     dst["sensors"] = src.numberOfSensors;
@@ -173,7 +173,7 @@ bool convertToJson(const RequestResponse_INFORMATION& src, JsonVariant dst) {
     dst["cycles"] = src.cycles;
     return true;
 }
-bool convertToJson(const RequestResponse_FAILURE& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_FAILURE& src, JsonVariant dst) {
     if (!src.isValid()) return false;
     dst["show"] = src.show;
     dst["count"] = src.count;
@@ -193,7 +193,7 @@ void addToJson(const TYPE flags, JsonArray&& arr) {
     for (TYPE flag = static_cast<TYPE>(1); flag < TYPE::All; flag = static_cast<TYPE>(static_cast<int>(flag) << 1))
         if ((flags & flag) != TYPE::None) arr.add(toString(flag));
 }
-bool convertToJson(const Manager::Config& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const Manager::Config& src, JsonVariant dst) {
     dst["id"] = src.id;
     addToJson(src.capabilities, dst["capabilities"].to<JsonArray>());
     addToJson(src.categories, dst["categories"].to<JsonArray>());
@@ -204,7 +204,7 @@ bool convertToJson(const Manager::Config& src, JsonVariant dst) {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-bool convertToJson(const Manager& src, JsonVariant dst) {
+STATIC_IF_ARDUINO_IDE bool convertToJson(const Manager& src, JsonVariant dst) {
 
     const auto convertConfig = [&](const Manager::Config& config) {
         dst["config"] = config;
