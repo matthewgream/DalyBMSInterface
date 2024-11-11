@@ -7,7 +7,7 @@
 #include "DalyBMSManager.hpp"
 #endif
 
-#include <Arduino.h> // String
+#include <Arduino.h>    // String
 
 namespace daly_bms {
 
@@ -18,16 +18,16 @@ STATIC_IF_ARDUINO_IDE void debugDump(const Manager& src) {
 
     const auto convertConfig = [&](const Manager::Config& config) {
         DEBUG_PRINTF("DalyBMS<%s>: capabilities=%s, categories=%s, debugging=%s\n",
-        config.id.c_str(), toStringBitwise(config.capabilities).c_str (), toStringBitwise(config.categories).c_str (), toStringBitwise(config.debugging).c_str ());
+                     config.id.c_str(), toStringBitwise(config.capabilities).c_str(), toStringBitwise(config.categories).c_str(), toStringBitwise(config.debugging).c_str());
     };
     const auto convertCategory = [&](const Manager::Config& config, const Categories category) -> String {
-        DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id.c_str (), toString(category).c_str ());
+        DEBUG_PRINTF("DalyBMS<%s>: %s:\n", config.id.c_str(), toString(category).c_str());
         return toString(category);
     };
     const auto convertElement = [&](auto&&, const auto& component) {
         if (!src.isEnabled(&component)) return false;
         if (component.isValid()) {
-            DEBUG_PRINTF("  %s: <%lu> ", getName(component), systemSecsSince (component.valid ()));
+            DEBUG_PRINTF("  %s: <%lu> ", getName(component), systemSecsSince(component.valid()));
             component.debugDump();
             return true;
         } else {
@@ -36,9 +36,9 @@ STATIC_IF_ARDUINO_IDE void debugDump(const Manager& src) {
         }
     };
 
-    convertConfig(src.getConfig ());
+    convertConfig(src.getConfig());
     if (src.isEnabled(Categories::Information)) {
-        auto information = convertCategory(src.getConfig (), Categories::Information);
+        auto information = convertCategory(src.getConfig(), Categories::Information);
         convertElement(information, src.information.config);
         convertElement(information, src.information.hardware);
         convertElement(information, src.information.firmware);
@@ -50,7 +50,7 @@ STATIC_IF_ARDUINO_IDE void debugDump(const Manager& src) {
         convertElement(information, src.information.rtc);
     }
     if (src.isEnabled(Categories::Thresholds)) {
-        auto thresholds = convertCategory(src.getConfig (), Categories::Thresholds);
+        auto thresholds = convertCategory(src.getConfig(), Categories::Thresholds);
         convertElement(thresholds, src.thresholds.voltage);
         convertElement(thresholds, src.thresholds.current);
         convertElement(thresholds, src.thresholds.sensor);
@@ -61,7 +61,7 @@ STATIC_IF_ARDUINO_IDE void debugDump(const Manager& src) {
         convertElement(thresholds, src.thresholds.shortcircuit);
     }
     if (src.isEnabled(Categories::Status)) {
-        auto status = convertCategory(src.getConfig (), Categories::Status);
+        auto status = convertCategory(src.getConfig(), Categories::Status);
         convertElement(status, src.status.status);
         convertElement(status, src.status.voltage);
         convertElement(status, src.status.sensor);
@@ -70,7 +70,7 @@ STATIC_IF_ARDUINO_IDE void debugDump(const Manager& src) {
         convertElement(status, src.status.failure);
     }
     if (src.isEnabled(Categories::Diagnostics)) {
-        auto diagnostics = convertCategory(src.getConfig (), Categories::Diagnostics);
+        auto diagnostics = convertCategory(src.getConfig(), Categories::Diagnostics);
         convertElement(diagnostics, src.diagnostics.voltages);
         convertElement(diagnostics, src.diagnostics.sensors);
         convertElement(diagnostics, src.diagnostics.balances);

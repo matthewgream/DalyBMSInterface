@@ -62,9 +62,7 @@ public:
     }
 
     bool valid() const {
-        return _data[Constants::OFFSET_BYTE_START] == Constants::VALUE_BYTE_START &&
-        _data[Constants::OFFSET_ADDRESS] == Constants::VALUE_ADDRESS_BMS_MASTER &&
-        _data[Constants::OFFSET_SIZE] == Constants::SIZE_DATA && _data[Constants::OFFSET_CHECKSUM] == calculateChecksum();
+        return _data[Constants::OFFSET_BYTE_START] == Constants::VALUE_BYTE_START && _data[Constants::OFFSET_ADDRESS] == Constants::VALUE_ADDRESS_BMS_MASTER && _data[Constants::OFFSET_SIZE] == Constants::SIZE_DATA && _data[Constants::OFFSET_CHECKSUM] == calculateChecksum();
     }
 
     //
@@ -105,7 +103,7 @@ public:
     }
 
     String toString() const {
-        return BytesToHexString<Constants::SIZE_FRAME> (_data.data (), " ");
+        return BytesToHexString<Constants::SIZE_FRAME>(_data.data(), " ");
     }
 
 protected:
@@ -165,7 +163,7 @@ public:
     }
 private:
     RequestResponseFrame _request{};
-    size_t _responseCount{1};
+    size_t _responseCount{ 1 };
 };
 
 // -----------------------------------------------------------------------------------------------
@@ -198,15 +196,15 @@ public:
     }
     bool processResponse(const RequestResponseFrame& frame) {
         _validState = false;
-        if (++ _responsesReceived <= _responsesExpected && (_responsesExpected == 1 || frame.getUInt8(0) == _responsesReceived))
+        if (++_responsesReceived <= _responsesExpected && (_responsesExpected == 1 || frame.getUInt8(0) == _responsesReceived))
             return processResponseFrame(frame, _responsesReceived);
         else return false;
     }
-    virtual const char * getName() const = 0;
+    virtual const char* getName() const = 0;
     virtual void debugDump() const = 0;
 protected:
     bool setValid(const bool v = true) {
-        if ((_validState = v)) _validTime = systemTicksNow ();
+        if ((_validState = v)) _validTime = systemTicksNow();
         _responsesReceived = 0;
         return v;
     }
@@ -226,4 +224,4 @@ private:
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-} // namespace daly_bms
+}    // namespace daly_bms

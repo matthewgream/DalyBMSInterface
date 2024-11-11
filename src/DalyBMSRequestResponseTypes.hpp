@@ -17,19 +17,18 @@
 namespace daly_bms {
 
 namespace detail {
-    inline String toString(float v) {
-        return String(v, 3);
-    }
-    template<typename TYPE>
-    static typename std::enable_if<
-        std::disjunction<
-            std::is_same<TYPE, int8_t>,
-            std::is_same<TYPE, uint8_t>
-        >::value,
-        String>::type
-    toString(TYPE v) {
-        return String(static_cast<int>(v));
-    }
+inline String toString(float v) {
+    return String(v, 3);
+}
+template<typename TYPE>
+static typename std::enable_if<
+    std::disjunction<
+        std::is_same<TYPE, int8_t>,
+        std::is_same<TYPE, uint8_t> >::value,
+    String>::type
+toString(TYPE v) {
+    return String(static_cast<int>(v));
+}
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -48,7 +47,7 @@ namespace detail {
 // -----------------------------------------------------------------------------------------------
 
 struct FrameTypeDateYMD {
-    uint8_t year{}, month{}, day{};  // 0-99 + 2000
+    uint8_t year{}, month{}, day{};    // 0-99 + 2000
     String toString() const {
         return String("20") + (year < 10 ? "0" : "") + String(year) + (month < 10 ? "0" : "") + String(month) + (day < 10 ? "0" : "") + String(day);
     }
@@ -59,10 +58,8 @@ struct FrameTypeDateHMS {
         return (hours < 10 ? "0" : "") + String(hours) + (minutes < 10 ? "0" : "") + String(minutes) + (seconds < 10 ? "0" : "") + String(seconds);
     }
 };
-STATIC_IF_ARDUINO_IDE String toString (const FrameTypeDateYMD& date, const FrameTypeDateHMS& time) {
-    return String("20") + (date.year < 10 ? "0" : "") + String(date.year) + (date.month < 10 ? "/0" : "/") + String(date.month) + (date.day < 10 ? "/0" : "/") + String(date.day) +
-        String ('T') +
-        (time.hours < 10 ? "0" : "") + String(time.hours) + (time.minutes < 10 ? ":0" : ":") + String(time.minutes) + (time.seconds < 10 ? ":0" : ":") + String(time.seconds);
+STATIC_IF_ARDUINO_IDE String toString(const FrameTypeDateYMD& date, const FrameTypeDateHMS& time) {
+    return String("20") + (date.year < 10 ? "0" : "") + String(date.year) + (date.month < 10 ? "/0" : "/") + String(date.month) + (date.day < 10 ? "/0" : "/") + String(date.day) + String('T') + (time.hours < 10 ? "0" : "") + String(time.hours) + (time.minutes < 10 ? ":0" : ":") + String(time.minutes) + (time.seconds < 10 ? ":0" : ":") + String(time.seconds);
 }
 template<typename TYPE>
 struct FrameTypeMinmax {
@@ -72,7 +69,7 @@ template<typename TYPE>
 struct FrameTypeThresholdsMinmax {
     FrameTypeMinmax<TYPE> L1{}, L2{};
 };
-template <typename TYPE>
+template<typename TYPE>
 struct FrameTypeThresholdsDifference {
     TYPE L1{}, L2{};
 };
@@ -164,8 +161,12 @@ class RequestResponseCommand : public RequestResponse {
 public:
     RequestResponseCommand()
         : RequestResponse(RequestResponse::Builder().setCommand(COMMAND)) {}
-    static constexpr const char* getTypeName() { return "command"; }
-    const char* getName() const override { return getTypeName (); }
+    static constexpr const char* getTypeName() {
+        return "command";
+    }
+    const char* getName() const override {
+        return getTypeName();
+    }
     void debugDump() const override {}
 protected:
     using RequestResponse::isValid;
@@ -188,11 +189,16 @@ template<uint8_t COMMAND, int LENGTH = 1>
 class RequestResponse_TYPE_STRING : public RequestResponseCommand<COMMAND> {
 public:
     String string;
-    RequestResponse_TYPE_STRING(): RequestResponseCommand<COMMAND>() {
+    RequestResponse_TYPE_STRING()
+        : RequestResponseCommand<COMMAND>() {
         setResponseFrameCount(LENGTH);
     }
-    static constexpr const char* getTypeName() { return "RequestResponse_TYPE_STRING"; }
-    const char* getName() const override { return getTypeName (); }
+    static constexpr const char* getTypeName() {
+        return "RequestResponse_TYPE_STRING";
+    }
+    const char* getName() const override {
+        return getTypeName();
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("%s\n", string.c_str());
@@ -219,11 +225,13 @@ class RequestResponse_BATTERY_RATINGS : public RequestResponseCommand<0x50> {
 public:
     double packCapacityAh{};
     double nominalCellVoltage{};
-    const char* getName() const override { return "RequestResponse_BATTERY_RATINGS"; }
+    const char* getName() const override {
+        return "RequestResponse_BATTERY_RATINGS";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("packCapacity=%.1fAh, nominalCellVoltage=%.1fV\n",
-                    packCapacityAh, nominalCellVoltage);
+                     packCapacityAh, nominalCellVoltage);
     }
     using RequestResponseCommand<0x50>::isValid;
 protected:
@@ -240,13 +248,15 @@ public:
     uint8_t boards{};
     std::array<uint8_t, 3> cells{};
     std::array<uint8_t, 3> sensors{};
-    const char* getName() const override { return "RequestResponse_BMS_CONFIG"; }
+    const char* getName() const override {
+        return "RequestResponse_BMS_CONFIG";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("boards=%d, cells=%d,%d,%d, sensors=%d,%d,%d\n",
-                    boards,
-                    cells[0], cells[1], cells[2],
-                    sensors[0], sensors[1], sensors[2]);
+                     boards,
+                     cells[0], cells[1], cells[2],
+                     sensors[0], sensors[1], sensors[2]);
     }
     using RequestResponseCommand<0x51>::isValid;
 protected:
@@ -260,13 +270,15 @@ protected:
 
 class RequestResponse_BATTERY_STAT : public RequestResponseCommand<0x52> {    // XXX TBC
 public:
-    double cumulativeChargeAh{}; // XXX should be custom type "Cumulative"
+    double cumulativeChargeAh{};    // XXX should be custom type "Cumulative"
     double cumulativeDischargeAh{};
-    const char* getName() const override { return "RequestResponse_BATTERY_STAT"; }
+    const char* getName() const override {
+        return "RequestResponse_BATTERY_STAT";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("cumulativeCharge=%.1fAh, cumulativeDischarge=%.1fAh\n",
-                        cumulativeChargeAh, cumulativeDischargeAh);
+                     cumulativeChargeAh, cumulativeDischargeAh);
     }
     using RequestResponseCommand<0x52>::isValid;
 protected:
@@ -282,14 +294,14 @@ enum class OperationalMode : uint8_t { LongPressPowerOnOff = 0x01 };
 STATIC_IF_ARDUINO_IDE String toString(const OperationalMode operationalMode) {
     switch (operationalMode) {
         case OperationalMode::LongPressPowerOnOff: return "long-press power-on/off";
-        default: return String ("0x") + String (static_cast <uint8_t> (operationalMode), HEX);
+        default: return String("0x") + String(static_cast<uint8_t>(operationalMode), HEX);
     }
 }
 enum class BatteryType : uint8_t { LithiumIon = 0x01 };
 STATIC_IF_ARDUINO_IDE String toString(const BatteryType batteryType) {
     switch (batteryType) {
         case BatteryType::LithiumIon: return "lithium-ion";
-        default: return String ("0x") + String (static_cast <uint8_t> (batteryType), HEX);
+        default: return String("0x") + String(static_cast<uint8_t>(batteryType), HEX);
     }
 }
 class RequestResponse_BATTERY_INFO : public RequestResponseCommand<0x53> {    // XXX TBC
@@ -299,14 +311,16 @@ public:
     FrameTypeDateYMD productionDate{};
     uint16_t automaticSleepSec{};
     uint8_t unknown1{}, unknown2{};
-    const char* getName() const override { return "RequestResponse_BATTERY_INFO"; }
+    const char* getName() const override {
+        return "RequestResponse_BATTERY_INFO";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("mode=%s, type=%s, date=%s, sleep=%d, unknown 1=%d, 2=%d\n",
-                    toString (mode).c_str (), toString (type).c_str (),
-                    productionDate.toString().c_str(),
-                    automaticSleepSec,
-                    unknown1, unknown2);
+                     toString(mode).c_str(), toString(type).c_str(),
+                     productionDate.toString().c_str(),
+                     automaticSleepSec,
+                     unknown1, unknown2);
     }
     using RequestResponseCommand<0x53>::isValid;
 protected:
@@ -319,12 +333,16 @@ protected:
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_BMS_FIRMWARE = RequestResponse_TYPE_STRING<0x54, 1>;
-template<>constexpr const char* RequestResponse_TYPE_STRING<0x54, 1>::getTypeName() { return "RequestResponse_BMS_FIRMWARE"; }
+template<> constexpr const char* RequestResponse_TYPE_STRING<0x54, 1>::getTypeName() {
+    return "RequestResponse_BMS_FIRMWARE";
+}
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_BATTERY_CODE = RequestResponse_TYPE_STRING<0x57, 5>;
-template<>constexpr const char* RequestResponse_TYPE_STRING<0x57, 5>::getTypeName() { return "RequestResponse_BATTERY_CODE"; }
+template<> constexpr const char* RequestResponse_TYPE_STRING<0x57, 5>::getTypeName() {
+    return "RequestResponse_BATTERY_CODE";
+}
 
 // -----------------------------------------------------------------------------------------------
 
@@ -332,21 +350,25 @@ template<uint8_t COMMAND, typename TYPE, int SIZE, auto DECODER>
 class RequestResponse_TYPE_THRESHOLD_MINMAX : public RequestResponseCommand<COMMAND> {
 public:
     FrameTypeThresholdsMinmax<TYPE> value{};
-    static constexpr const char* getTypeName() { return "RequestResponse_TYPE_THRESHOLD_MINMAX"; }
-    const char* getName() const override { return getTypeName (); }
+    static constexpr const char* getTypeName() {
+        return "RequestResponse_TYPE_THRESHOLD_MINMAX";
+    }
+    const char* getName() const override {
+        return getTypeName();
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("max L1=%s,L2=%s, min L1=%s,L2=%s\n",    // XXX units
-                    detail::toString(value.L1.max).c_str(),
-                    detail::toString(value.L2.max).c_str(),
-                    detail::toString(value.L1.min).c_str(),
-                    detail::toString(value.L2.min).c_str());
+                     detail::toString(value.L1.max).c_str(),
+                     detail::toString(value.L2.max).c_str(),
+                     detail::toString(value.L1.min).c_str(),
+                     detail::toString(value.L2.min).c_str());
     }
     using RequestResponseCommand<COMMAND>::isValid;
 protected:
     using RequestResponseCommand<COMMAND>::setValid;
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
-        return setValid( // XXX should be template
+        return setValid(    // XXX should be template
             DECODER(frame, SIZE * 0, &value.L1.max) && DECODER(frame, SIZE * 1, &value.L2.max) && DECODER(frame, SIZE * 2, &value.L1.min) && DECODER(frame, SIZE * 3, &value.L2.min));
     }
 };
@@ -354,52 +376,54 @@ protected:
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_THRESHOLDS_CELL_VOLTAGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x59, float, 2, FrameContentDecoder::decode_Voltage_m>;
-template<>constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x59, float, 2, FrameContentDecoder::decode_Voltage_m>::getTypeName() { return "RequestResponse_THRESHOLDS_CELL_VOLTAGE"; };
+template<> constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x59, float, 2, FrameContentDecoder::decode_Voltage_m>::getTypeName() {
+    return "RequestResponse_THRESHOLDS_CELL_VOLTAGE";
+};
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_THRESHOLDS_VOLTAGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5A, float, 2, FrameContentDecoder::decode_Voltage_d>;
-template<>constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x5A, float, 2, FrameContentDecoder::decode_Voltage_d>::getTypeName() { return "RequestResponse_THRESHOLDS_VOLTAGE"; };
+template<> constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x5A, float, 2, FrameContentDecoder::decode_Voltage_d>::getTypeName() {
+    return "RequestResponse_THRESHOLDS_VOLTAGE";
+};
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_THRESHOLDS_CURRENT = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5B, float, 2, FrameContentDecoder::decode_Current_d>;
-template<>constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x5B, float, 2, FrameContentDecoder::decode_Current_d>::getTypeName() { return "RequestResponse_THRESHOLDS_CURRENT"; };
+template<> constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x5B, float, 2, FrameContentDecoder::decode_Current_d>::getTypeName() {
+    return "RequestResponse_THRESHOLDS_CURRENT";
+};
 
 // -----------------------------------------------------------------------------------------------
 
 class RequestResponse_THRESHOLDS_SENSOR : public RequestResponseCommand<0x5C> {
 public:
     FrameTypeThresholdsMinmax<int8_t> charge{}, discharge{};
-    const char* getName() const override { return "RequestResponse_THRESHOLDS_SENSOR"; }
+    const char* getName() const override {
+        return "RequestResponse_THRESHOLDS_SENSOR";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("charge max L1=%dC,L2=%dC min L1=%dC,L2=%dC, discharge max L1=%dC,L2=%dC min L1=%dC,L2=%dC\n",
-                    charge.L1.max, charge.L2.max,
-                    charge.L1.min, charge.L2.min,
-                    discharge.L1.max, discharge.L2.max,
-                    discharge.L1.min, discharge.L2.min);
-
+                     charge.L1.max, charge.L2.max,
+                     charge.L1.min, charge.L2.min,
+                     discharge.L1.max, discharge.L2.max,
+                     discharge.L1.min, discharge.L2.min);
     }
     using RequestResponseCommand<0x5C>::isValid;
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
-        return setValid( // XXX should be template
-            FrameContentDecoder::decode_Temperature(frame, 0, &charge.L1.max) &&
-             FrameContentDecoder::decode_Temperature(frame, 1, &charge.L2.max) &&
-             FrameContentDecoder::decode_Temperature(frame, 2, &charge.L1.min) &&
-             FrameContentDecoder::decode_Temperature(frame, 3, &charge.L2.min) &&
-             FrameContentDecoder::decode_Temperature(frame, 4, &discharge.L1.max) &&
-             FrameContentDecoder::decode_Temperature(frame, 5, &discharge.L2.max) &&
-             FrameContentDecoder::decode_Temperature(frame, 6, &discharge.L1.min) &&
-             FrameContentDecoder::decode_Temperature(frame, 7, &discharge.L2.min));
+        return setValid(    // XXX should be template
+            FrameContentDecoder::decode_Temperature(frame, 0, &charge.L1.max) && FrameContentDecoder::decode_Temperature(frame, 1, &charge.L2.max) && FrameContentDecoder::decode_Temperature(frame, 2, &charge.L1.min) && FrameContentDecoder::decode_Temperature(frame, 3, &charge.L2.min) && FrameContentDecoder::decode_Temperature(frame, 4, &discharge.L1.max) && FrameContentDecoder::decode_Temperature(frame, 5, &discharge.L2.max) && FrameContentDecoder::decode_Temperature(frame, 6, &discharge.L1.min) && FrameContentDecoder::decode_Temperature(frame, 7, &discharge.L2.min));
     }
 };
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_THRESHOLDS_CHARGE = RequestResponse_TYPE_THRESHOLD_MINMAX<0x5D, float, 2, FrameContentDecoder::decode_Percent_d>;
-template<> constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x5D, float, 2, FrameContentDecoder::decode_Percent_d>::getTypeName() { return "RequestResponse_THRESHOLDS_CHARGE"; };
+template<> constexpr const char* RequestResponse_TYPE_THRESHOLD_MINMAX<0x5D, float, 2, FrameContentDecoder::decode_Percent_d>::getTypeName() {
+    return "RequestResponse_THRESHOLDS_CHARGE";
+};
 
 // -----------------------------------------------------------------------------------------------
 
@@ -407,19 +431,20 @@ class RequestResponse_THRESHOLDS_CELL_SENSOR : public RequestResponseCommand<0x5
 public:
     FrameTypeThresholdsDifference<float> voltage{};
     FrameTypeThresholdsDifference<int8_t> temperature{};
-    const char* getName() const override { return "RequestResponse_THRESHOLDS_CELL_SENSOR"; }
+    const char* getName() const override {
+        return "RequestResponse_THRESHOLDS_CELL_SENSOR";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("voltage diff L1=%.3fV,L2=%.3fV, temperature diff L1=%dC,L2=%dC\n",
-                    voltage.L1, voltage.L2,
-                    temperature.L1, temperature.L2);
+                     voltage.L1, voltage.L2,
+                     temperature.L1, temperature.L2);
     }
     using RequestResponseCommand<0x5E>::isValid;
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
-        return setValid(  // XXX should be template
-            FrameContentDecoder::decode_Voltage_m(frame, 0, &voltage.L1) && FrameContentDecoder::decode_Voltage_m(frame, 2, &voltage.L2) &&
-            FrameContentDecoder::decode_Temperature(frame, 4, &temperature.L1) && FrameContentDecoder::decode_Temperature(frame, 5, &temperature.L2));
+        return setValid(    // XXX should be template
+            FrameContentDecoder::decode_Voltage_m(frame, 0, &voltage.L1) && FrameContentDecoder::decode_Voltage_m(frame, 2, &voltage.L2) && FrameContentDecoder::decode_Temperature(frame, 4, &temperature.L1) && FrameContentDecoder::decode_Temperature(frame, 5, &temperature.L2));
     }
 };
 
@@ -429,12 +454,14 @@ class RequestResponse_THRESHOLDS_CELL_BALANCE : public RequestResponseCommand<0x
 public:
     float voltageEnableThreshold{};
     float voltageAcceptableDifference{};
-    const char* getName() const override { return "RequestResponse_THRESHOLDS_CELL_BALANCE"; }
+    const char* getName() const override {
+        return "RequestResponse_THRESHOLDS_CELL_BALANCE";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("voltage enable=%.3fV, acceptable=%.3fV\n",
-                    voltageEnableThreshold,
-                    voltageAcceptableDifference);
+                     voltageEnableThreshold,
+                     voltageAcceptableDifference);
     }
     using RequestResponseCommand<0x5F>::isValid;
 protected:
@@ -450,11 +477,13 @@ class RequestResponse_THRESHOLDS_SHORTCIRCUIT : public RequestResponseCommand<0x
 public:
     float currentShutdownA{};
     float currentSamplingR{};
-    const char* getName() const override { return "RequestResponse_THRESHOLDS_SHORTCIRCUIT"; }
+    const char* getName() const override {
+        return "RequestResponse_THRESHOLDS_SHORTCIRCUIT";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("shutdown=%.1fA, sampling=%.3fR\n",
-                 currentShutdownA, currentSamplingR);
+                     currentShutdownA, currentSamplingR);
     }
     using RequestResponseCommand<0x60>::isValid;
 protected:
@@ -470,10 +499,12 @@ class RequestResponse_BMS_RTC : public RequestResponseCommand<0x61> {
 public:
     FrameTypeDateYMD date{};
     FrameTypeDateHMS time{};
-    const char* getName() const override { return "RequestResponse_BMS_RTC"; }
+    const char* getName() const override {
+        return "RequestResponse_BMS_RTC";
+    }
     void debugDump() const override {
         if (!isValid()) return;
-        DEBUG_PRINTF("%s\n", toString (date, time).c_str ());
+        DEBUG_PRINTF("%s\n", toString(date, time).c_str());
     }
     using RequestResponseCommand<0x61>::isValid;
 protected:
@@ -486,12 +517,16 @@ protected:
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_BMS_SOFTWARE = RequestResponse_TYPE_STRING<0x62, 2>;
-template<> constexpr const char* RequestResponse_TYPE_STRING<0x62, 2>::getTypeName() { return "RequestResponse_BMS_SOFTWARE"; };
+template<> constexpr const char* RequestResponse_TYPE_STRING<0x62, 2>::getTypeName() {
+    return "RequestResponse_BMS_SOFTWARE";
+};
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_BMS_HARDWARE = RequestResponse_TYPE_STRING<0x63, 2>;
-template<> constexpr const char* RequestResponse_TYPE_STRING<0x63, 2>::getTypeName() { return "RequestResponse_BMS_HARDWARE"; };
+template<> constexpr const char* RequestResponse_TYPE_STRING<0x63, 2>::getTypeName() {
+    return "RequestResponse_BMS_HARDWARE";
+};
 
 // -----------------------------------------------------------------------------------------------
 
@@ -500,19 +535,19 @@ public:
     float voltage{};
     float current{};
     float charge{};
-    const char* getName() const override { return "RequestResponse_STATUS"; }
+    const char* getName() const override {
+        return "RequestResponse_STATUS";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("%.1f volts, %.1f amps, %.1f percent\n",
-                 voltage, current, charge);
+                     voltage, current, charge);
     }
     using RequestResponseCommand<0x90>::isValid;
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
         return setValid(
-            FrameContentDecoder::decode_Voltage_d(frame, 0, &voltage) &&
-            FrameContentDecoder::decode_Current_d(frame, 4, &current) &&
-            FrameContentDecoder::decode_Percent_d(frame, 6, &charge));
+            FrameContentDecoder::decode_Voltage_d(frame, 0, &voltage) && FrameContentDecoder::decode_Current_d(frame, 4, &current) && FrameContentDecoder::decode_Percent_d(frame, 6, &charge));
     }
 };
 
@@ -523,47 +558,54 @@ class RequestResponse_TYPE_VALUE_MINMAX : public RequestResponseCommand<COMMAND>
 public:
     FrameTypeMinmax<TYPE> value{};
     FrameTypeMinmax<uint8_t> cellNumber{};
-    static constexpr const char* getTypeName() { return "RequestResponse_TYPE_VALUE_MINMAX"; }
-    const char* getName() const override { return getTypeName (); }
+    static constexpr const char* getTypeName() {
+        return "RequestResponse_TYPE_VALUE_MINMAX";
+    }
+    const char* getName() const override {
+        return getTypeName();
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("max=%s (#%d), min=%s (#%d)\n",    // XXX units
-                    detail::toString(value.max).c_str(),
-                    cellNumber.max,
-                    detail::toString(value.min).c_str(),
-                    cellNumber.min);
+                     detail::toString(value.max).c_str(),
+                     cellNumber.max,
+                     detail::toString(value.min).c_str(),
+                     cellNumber.min);
     }
     using RequestResponseCommand<COMMAND>::isValid;
     using RequestResponseCommand<COMMAND>::setValid;
 protected:
     bool processResponseFrame(const RequestResponseFrame& frame, const size_t) override {
-        return setValid( // XXX should be template
-            DECODER(frame, 0, &value.max) &&
-            FrameContentDecoder::decode(frame, SIZE, &cellNumber.max) &&
-            DECODER(frame, SIZE + 1, &value.min) &&
-            FrameContentDecoder::decode(frame, SIZE + 1 + SIZE, &cellNumber.min));
+        return setValid(    // XXX should be template
+            DECODER(frame, 0, &value.max) && FrameContentDecoder::decode(frame, SIZE, &cellNumber.max) && DECODER(frame, SIZE + 1, &value.min) && FrameContentDecoder::decode(frame, SIZE + 1 + SIZE, &cellNumber.min));
     }
 };
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_VOLTAGE_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x91, float, 2, FrameContentDecoder::decode_Voltage_m>;
-template<>constexpr const char* RequestResponse_TYPE_VALUE_MINMAX<0x91, float, 2, FrameContentDecoder::decode_Voltage_m>::getTypeName () { return "RequestResponse_VOLTAGE_MINMAX"; };
+template<> constexpr const char* RequestResponse_TYPE_VALUE_MINMAX<0x91, float, 2, FrameContentDecoder::decode_Voltage_m>::getTypeName() {
+    return "RequestResponse_VOLTAGE_MINMAX";
+};
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_SENSOR_MINMAX = RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 1, FrameContentDecoder::decode_Temperature>;
-template<>constexpr const char* RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 1, FrameContentDecoder::decode_Temperature>::getTypeName () { return "RequestResponse_SENSOR_MINMAX"; };
+template<> constexpr const char* RequestResponse_TYPE_VALUE_MINMAX<0x92, int8_t, 1, FrameContentDecoder::decode_Temperature>::getTypeName() {
+    return "RequestResponse_SENSOR_MINMAX";
+};
 
 // -----------------------------------------------------------------------------------------------
 
-enum class ChargeState : uint8_t { Stationary = 0x00, Charge = 0x01, Discharge = 0x02 };
+enum class ChargeState : uint8_t { Stationary = 0x00,
+                                   Charge = 0x01,
+                                   Discharge = 0x02 };
 STATIC_IF_ARDUINO_IDE String toString(const ChargeState state) {
     switch (state) {
         case ChargeState::Stationary: return "stationary";
         case ChargeState::Charge: return "charge";
         case ChargeState::Discharge: return "discharge";
-        default: return String ("0x") + String (static_cast <uint8_t> (state), HEX);
+        default: return String("0x") + String(static_cast<uint8_t>(state), HEX);
     }
 }
 
@@ -574,15 +616,17 @@ public:
     bool mosDischargeState{};
     uint8_t bmsLifeCycle{};
     double residualCapacityAh{};
-    const char* getName() const override { return "RequestResponse_MOSFET"; }
+    const char* getName() const override {
+        return "RequestResponse_MOSFET";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("state=%s, MOS charge=%s, discharge=%s, cycle=%d, capacity=%.1fAh\n",
-                toString(state).c_str(),
-                mosChargeState ? "on" : "off",
-                mosDischargeState ? "on" : "off",
-                bmsLifeCycle,
-                residualCapacityAh);
+                     toString(state).c_str(),
+                     mosChargeState ? "on" : "off",
+                     mosDischargeState ? "on" : "off",
+                     bmsLifeCycle,
+                     residualCapacityAh);
     }
     using RequestResponseCommand<0x93>::isValid;
 protected:
@@ -602,14 +646,16 @@ public:
     bool loadStatus{};
     std::array<bool, 8> dioStates{};
     uint16_t cycles{};
-    const char* getName() const override { return "RequestResponse_INFORMATION"; }
+    const char* getName() const override {
+        return "RequestResponse_INFORMATION";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("cells=%d, sensors=%d, charger=%s, load=%s, cycles=%d\n",
-                 numberOfCells, numberOfSensors,
-                 chargerStatus ? "on" : "off",
-                 loadStatus ? "on" : "off",
-                 cycles);
+                     numberOfCells, numberOfSensors,
+                     chargerStatus ? "on" : "off",
+                     loadStatus ? "on" : "off",
+                     cycles);
     }
     using RequestResponseCommand<0x94>::isValid;
 protected:
@@ -636,9 +682,13 @@ public:
     bool isRequestable() const override {
         return !values.empty();
     }
-    static constexpr const char* getTypeName() { return "RequestResponse_TYPE_ARRAY"; }
-    const char* getName() const override { return getTypeName (); }
-    void debugDump () const override {
+    static constexpr const char* getTypeName() {
+        return "RequestResponse_TYPE_ARRAY";
+    }
+    const char* getName() const override {
+        return getTypeName();
+    }
+    void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("%u /", values.size());
         for (const auto& v : values)
@@ -653,7 +703,7 @@ protected:
         if (FRAMENUM && (frame.getUInt8(0) != frameNum || frame.getUInt8(0) > (values.size() / ITEMS_PER_FRAME) + 1)) return false;
         for (size_t i = 0; i < ITEMS_PER_FRAME && (((frameNum - 1) * ITEMS_PER_FRAME) + i) < values.size(); i++)
             if (!DECODER(frame, (FRAMENUM ? 1 : 0) + i * SIZE, &values[((frameNum - 1) * ITEMS_PER_FRAME) + i]))
-                return setValid (false); // will block remaining frames
+                return setValid(false);    // will block remaining frames
         if (frameNum == (values.size() / ITEMS_PER_FRAME) + 1)
             return setValid();
         return true;
@@ -663,17 +713,23 @@ protected:
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_VOLTAGES = RequestResponse_TYPE_ARRAY<0x95, float, 2, 48, 3, true, FrameContentDecoder::decode_Voltage_m>;
-template<> constexpr const char* RequestResponse_TYPE_ARRAY<0x95, float, 2, 48, 3, true, FrameContentDecoder::decode_Voltage_m>::getTypeName() { return "RequestResponse_VOLTAGES"; };
+template<> constexpr const char* RequestResponse_TYPE_ARRAY<0x95, float, 2, 48, 3, true, FrameContentDecoder::decode_Voltage_m>::getTypeName() {
+    return "RequestResponse_VOLTAGES";
+};
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_SENSORS = RequestResponse_TYPE_ARRAY<0x96, int8_t, 1, 16, 7, true, FrameContentDecoder::decode_Temperature>;
-template<> constexpr const char* RequestResponse_TYPE_ARRAY<0x96, int8_t, 1, 16, 7, true, FrameContentDecoder::decode_Temperature>::getTypeName() { return "RequestResponse_SENSORS"; };
+template<> constexpr const char* RequestResponse_TYPE_ARRAY<0x96, int8_t, 1, 16, 7, true, FrameContentDecoder::decode_Temperature>::getTypeName() {
+    return "RequestResponse_SENSORS";
+};
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_BALANCES = RequestResponse_TYPE_ARRAY<0x97, uint8_t, 1, 48, 48, false, FrameContentDecoder::decode_BitNoFrameNum>;
-template<> constexpr const char* RequestResponse_TYPE_ARRAY<0x97, uint8_t, 1, 48, 48, false, FrameContentDecoder::decode_BitNoFrameNum>::getTypeName() { return "RequestResponse_BALANCES"; };
+template<> constexpr const char* RequestResponse_TYPE_ARRAY<0x97, uint8_t, 1, 48, 48, false, FrameContentDecoder::decode_BitNoFrameNum>::getTypeName() {
+    return "RequestResponse_BALANCES";
+};
 
 // -----------------------------------------------------------------------------------------------
 
@@ -691,7 +747,9 @@ public:
                 output[c++] = FAILURE_DESCRIPTIONS[i];
         return c;
     }
-    const char* getName() const override { return "RequestResponse_FAILURE"; }
+    const char* getName() const override {
+        return "RequestResponse_FAILURE";
+    }
     void debugDump() const override {
         if (!isValid()) return;
         DEBUG_PRINTF("show=%s, count=%d", show ? "yes" : "no", count);
@@ -736,24 +794,34 @@ public:
     RequestResponseFrame prepareRequest(const Setting setting) {
         return RequestResponse::prepareRequest().setUInt8(4, static_cast<uint8_t>(setting)).finalize();
     }
-    static constexpr const char* getTypeName() { return "RequestResponse_TYPE_ONOFF"; }
-    const char* getName() const override { return getTypeName (); }
+    static constexpr const char* getTypeName() {
+        return "RequestResponse_TYPE_ONOFF";
+    }
+    const char* getName() const override {
+        return getTypeName();
+    }
 };
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_RESET = RequestResponseCommand<0x00>;
-template<> constexpr const char* RequestResponseCommand<0x00>::getTypeName() { return "RequestResponse_RESET"; }
+template<> constexpr const char* RequestResponseCommand<0x00>::getTypeName() {
+    return "RequestResponse_RESET";
+}
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_MOSFET_DISCHARGE = RequestResponse_TYPE_ONOFF<0xD9>;
-template<> constexpr const char* RequestResponse_TYPE_ONOFF<0xD9>::getTypeName() { return "RequestResponse_MOSFET_DISCHARGE"; }
+template<> constexpr const char* RequestResponse_TYPE_ONOFF<0xD9>::getTypeName() {
+    return "RequestResponse_MOSFET_DISCHARGE";
+}
 
 // -----------------------------------------------------------------------------------------------
 
 using RequestResponse_MOSFET_CHARGE = RequestResponse_TYPE_ONOFF<0xDA>;
-template<> constexpr const char* RequestResponse_TYPE_ONOFF<0xDA>::getTypeName() { return "RequestResponse_MOSFET_CHARGE"; }
+template<> constexpr const char* RequestResponse_TYPE_ONOFF<0xDA>::getTypeName() {
+    return "RequestResponse_MOSFET_CHARGE";
+}
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
@@ -761,33 +829,34 @@ template<> constexpr const char* RequestResponse_TYPE_ONOFF<0xDA>::getTypeName()
 #include <type_traits>
 
 template<typename TYPE> struct TypeName { static constexpr const char* name = "unknown"; };
-#define TYPE_NAME(TYPE,NAME) template<> struct TypeName<TYPE> { static constexpr const char* name = NAME; }
-TYPE_NAME(RequestResponse_BMS_CONFIG,"config");
-TYPE_NAME(RequestResponse_BMS_HARDWARE,"hardware");
-TYPE_NAME(RequestResponse_BMS_FIRMWARE,"firmware");
-TYPE_NAME(RequestResponse_BMS_SOFTWARE,"software");
-TYPE_NAME(RequestResponse_BATTERY_RATINGS,"battery_ratings");
-TYPE_NAME(RequestResponse_BATTERY_CODE,"battery_code");
-TYPE_NAME(RequestResponse_BATTERY_INFO,"battery_info");
-TYPE_NAME(RequestResponse_BATTERY_STAT,"battery_stat");
-TYPE_NAME(RequestResponse_BMS_RTC,"rtc");
-TYPE_NAME(RequestResponse_THRESHOLDS_VOLTAGE,"voltage");
-TYPE_NAME(RequestResponse_THRESHOLDS_CURRENT,"current");
-TYPE_NAME(RequestResponse_THRESHOLDS_SENSOR,"sensor");
-TYPE_NAME(RequestResponse_THRESHOLDS_CHARGE,"charge");
-TYPE_NAME(RequestResponse_THRESHOLDS_SHORTCIRCUIT,"shortcircuit");
-TYPE_NAME(RequestResponse_THRESHOLDS_CELL_VOLTAGE,"cell_voltage");
-TYPE_NAME(RequestResponse_THRESHOLDS_CELL_SENSOR,"cell_sensor");
-TYPE_NAME(RequestResponse_THRESHOLDS_CELL_BALANCE,"cell_balance");
-TYPE_NAME(RequestResponse_STATUS,"status");
-TYPE_NAME(RequestResponse_VOLTAGE_MINMAX,"voltage");
-TYPE_NAME(RequestResponse_SENSOR_MINMAX,"sensor");
-TYPE_NAME(RequestResponse_MOSFET,"mosfet");
-TYPE_NAME(RequestResponse_INFORMATION,"info");
-TYPE_NAME(RequestResponse_FAILURE,"failure");
-TYPE_NAME(RequestResponse_VOLTAGES,"voltages");
-TYPE_NAME(RequestResponse_SENSORS,"sensors");
-TYPE_NAME(RequestResponse_BALANCES,"balances");
+#define TYPE_NAME(TYPE, NAME) \
+    template<> struct TypeName<TYPE> { static constexpr const char* name = NAME; }
+TYPE_NAME(RequestResponse_BMS_CONFIG, "config");
+TYPE_NAME(RequestResponse_BMS_HARDWARE, "hardware");
+TYPE_NAME(RequestResponse_BMS_FIRMWARE, "firmware");
+TYPE_NAME(RequestResponse_BMS_SOFTWARE, "software");
+TYPE_NAME(RequestResponse_BATTERY_RATINGS, "battery_ratings");
+TYPE_NAME(RequestResponse_BATTERY_CODE, "battery_code");
+TYPE_NAME(RequestResponse_BATTERY_INFO, "battery_info");
+TYPE_NAME(RequestResponse_BATTERY_STAT, "battery_stat");
+TYPE_NAME(RequestResponse_BMS_RTC, "rtc");
+TYPE_NAME(RequestResponse_THRESHOLDS_VOLTAGE, "voltage");
+TYPE_NAME(RequestResponse_THRESHOLDS_CURRENT, "current");
+TYPE_NAME(RequestResponse_THRESHOLDS_SENSOR, "sensor");
+TYPE_NAME(RequestResponse_THRESHOLDS_CHARGE, "charge");
+TYPE_NAME(RequestResponse_THRESHOLDS_SHORTCIRCUIT, "shortcircuit");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_VOLTAGE, "cell_voltage");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_SENSOR, "cell_sensor");
+TYPE_NAME(RequestResponse_THRESHOLDS_CELL_BALANCE, "cell_balance");
+TYPE_NAME(RequestResponse_STATUS, "status");
+TYPE_NAME(RequestResponse_VOLTAGE_MINMAX, "voltage");
+TYPE_NAME(RequestResponse_SENSOR_MINMAX, "sensor");
+TYPE_NAME(RequestResponse_MOSFET, "mosfet");
+TYPE_NAME(RequestResponse_INFORMATION, "info");
+TYPE_NAME(RequestResponse_FAILURE, "failure");
+TYPE_NAME(RequestResponse_VOLTAGES, "voltages");
+TYPE_NAME(RequestResponse_SENSORS, "sensors");
+TYPE_NAME(RequestResponse_BALANCES, "balances");
 template<typename TYPE> constexpr const char* getName(const TYPE&) {
     return TypeName<TYPE>::name;
 }
@@ -795,7 +864,7 @@ template<typename TYPE> constexpr const char* getName(const TYPE&) {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-} // namespace daly_bms
+}    // namespace daly_bms
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------

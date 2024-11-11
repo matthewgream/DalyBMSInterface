@@ -45,8 +45,8 @@ bool convertToJson(const RequestResponse_TYPE_STRING<COMMAND, LENGTH>& src, Json
 template<uint8_t COMMAND, typename TYPE, int SIZE, auto DECODER>
 bool convertToJson(const RequestResponse_TYPE_THRESHOLD_MINMAX<COMMAND, TYPE, SIZE, DECODER>& src, JsonVariant dst) {
     if (!src.isValid()) return false;
-  //  convertToJson (src.value, dst);
-    dst.set (src.value);
+    //  convertToJson (src.value, dst);
+    dst.set(src.value);
     // dst["maxL1"] = src.maxL1;
     // dst["maxL2"] = src.maxL2;
     // dst["minL1"] = src.minL1;
@@ -94,8 +94,8 @@ STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BATTERY_RATINGS& 
 }
 STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BATTERY_INFO& src, JsonVariant dst) {
     if (!src.isValid()) return false;
-    dst["operationalMode"] = toString (src.mode);
-    dst["type"] = toString (src.type);
+    dst["operationalMode"] = toString(src.mode);
+    dst["type"] = toString(src.type);
     dst["productionDate"] = src.productionDate.toString();
     dst["automaticSleepSec"] = src.automaticSleepSec;
     return true;
@@ -108,13 +108,13 @@ STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BATTERY_STAT& src
 }
 STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_BMS_RTC& src, JsonVariant dst) {
     if (!src.isValid()) return false;
-    dst.set (toString (src.date, src.time));
+    dst.set(toString(src.date, src.time));
     return true;
 }
 STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_SENSOR& src, JsonVariant dst) {
     if (!src.isValid()) return false;
-    dst ["charge"] = src.charge;
-    dst ["discharge"] = src.discharge;
+    dst["charge"] = src.charge;
+    dst["discharge"] = src.discharge;
     // JsonObject charge = dst["charge"].to<JsonObject>();
     // charge["maxL1"] = src.chargeMaxL1;
     // charge["maxL2"] = src.chargeMaxL2;
@@ -129,8 +129,8 @@ STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_SENSOR
 }
 STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_CELL_SENSOR& src, JsonVariant dst) {
     if (!src.isValid()) return false;
-    dst ["voltageDiff"] = src.voltage;
-    dst ["temperatureDiff"] = src.temperature;
+    dst["voltageDiff"] = src.voltage;
+    dst["temperatureDiff"] = src.temperature;
     return true;
 }
 STATIC_IF_ARDUINO_IDE bool convertToJson(const RequestResponse_THRESHOLDS_CELL_BALANCE& src, JsonVariant dst) {
@@ -217,9 +217,9 @@ STATIC_IF_ARDUINO_IDE bool convertToJson(const Manager& src, JsonVariant dst) {
             handler[getName(component)] = component;
     };
 
-    convertConfig(src.getConfig ());
+    convertConfig(src.getConfig());
     if (src.isEnabled(Categories::Information)) {
-        auto information = convertCategory(src.getConfig (), Categories::Information);
+        auto information = convertCategory(src.getConfig(), Categories::Information);
         convertElement(information, src.information.config);
         convertElement(information, src.information.hardware);
         convertElement(information, src.information.firmware);
@@ -231,7 +231,7 @@ STATIC_IF_ARDUINO_IDE bool convertToJson(const Manager& src, JsonVariant dst) {
         convertElement(information, src.information.rtc);
     }
     if (src.isEnabled(Categories::Thresholds)) {
-        auto thresholds = convertCategory(src.getConfig (), Categories::Thresholds);
+        auto thresholds = convertCategory(src.getConfig(), Categories::Thresholds);
         convertElement(thresholds, src.thresholds.voltage);
         convertElement(thresholds, src.thresholds.current);
         convertElement(thresholds, src.thresholds.sensor);
@@ -242,7 +242,7 @@ STATIC_IF_ARDUINO_IDE bool convertToJson(const Manager& src, JsonVariant dst) {
         convertElement(thresholds, src.thresholds.shortcircuit);
     }
     if (src.isEnabled(Categories::Status)) {
-        auto status = convertCategory(src.getConfig (), Categories::Status);
+        auto status = convertCategory(src.getConfig(), Categories::Status);
         convertElement(status, src.status.status);
         convertElement(status, src.status.voltage);
         convertElement(status, src.status.sensor);
@@ -251,7 +251,7 @@ STATIC_IF_ARDUINO_IDE bool convertToJson(const Manager& src, JsonVariant dst) {
         convertElement(status, src.status.failure);
     }
     if (src.isEnabled(Categories::Diagnostics)) {
-        auto diagnostics = convertCategory(src.getConfig (), Categories::Diagnostics);
+        auto diagnostics = convertCategory(src.getConfig(), Categories::Diagnostics);
         convertElement(diagnostics, src.diagnostics.voltages);
         convertElement(diagnostics, src.diagnostics.sensors);
         convertElement(diagnostics, src.diagnostics.balances);

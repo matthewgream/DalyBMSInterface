@@ -10,7 +10,8 @@ typedef unsigned long interval_t;
 class Intervalable {
     interval_t _interval, _previous{};
 public:
-    explicit Intervalable(const interval_t interval = 0) : _interval(interval) {}
+    explicit Intervalable(const interval_t interval = 0)
+        : _interval(interval) {}
     operator bool() {
         const interval_t current = millis();
         if (current - _previous > _interval) {
@@ -67,7 +68,7 @@ void testRaw() {
         if (enPin >= 0) digitalWrite(enPin, LOW);
 
         while (1) {
-            uint8_t command [13] = { 0xA5, 0x40 , 0x90 , 0x08 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x7D };
+            uint8_t command[13] = { 0xA5, 0x40, 0x90, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7D };
             serial.write(command, 13);
             while (serial.available() > 0) {
                 uint8_t byte = serial.read();
@@ -92,33 +93,33 @@ void testOne() {
     const int serialId = BALANCE_ID, serialRxPin = BALANCE_PIN_RX, serialTxPin = BALANCE_PIN_TX, enPin = BALANCE_PIN_EN;
     daly_bms::Manager::Config config = { .id = "balance", .capabilities = daly_bms::Capabilities::All, .categories = daly_bms::Categories::All };
 
-    HardwareSerial serial (serialId);
+    HardwareSerial serial(serialId);
     serial.begin(daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_BAUD, daly_bms::HardwareSerialConnector::DEFAULT_SERIAL_CONFIG, serialRxPin, serialTxPin);
     if (enPin >= 0) digitalWrite(enPin, LOW);
-    daly_bms::HardwareSerialConnector connector (serial);
-    daly_bms::Manager manager (config, connector);
-    manager.begin ();
+    daly_bms::HardwareSerialConnector connector(serial);
+    daly_bms::Manager manager(config, connector);
+    manager.begin();
 
     while (1) {
         auto& request = manager.information.rtc;
         // manager.issue (manager.status.info); // required to capture numbers for diagnostics request/responses
-        manager.issue (request);
-        delay (5000);
-        manager.process ();
-        if (request.isValid ()) {
-            DEBUG_PRINTF ("---> \n");
-            request.debugDump ();
-            DEBUG_PRINTF ("<--- \n");
+        manager.issue(request);
+        delay(5000);
+        manager.process();
+        if (request.isValid()) {
+            DEBUG_PRINTF("---> \n");
+            request.debugDump();
+            DEBUG_PRINTF("<--- \n");
         }
-        DEBUG_PRINTF (".\n");
+        DEBUG_PRINTF(".\n");
     }
 }
 
 // -----------------------------------------------------------------------------------------------
 
-Intervalable processInterval (5 * 1000), requestStatus(15 * 1000), requestDiagnostics(30 * 1000), reportData(30 * 1000);
+Intervalable processInterval(5 * 1000), requestStatus(15 * 1000), requestDiagnostics(30 * 1000), reportData(30 * 1000);
 
-daly_bms::Interfaces* dalyInterfaces{nullptr};
+daly_bms::Interfaces* dalyInterfaces{ nullptr };
 
 void dalybms_setup() {
 
@@ -140,25 +141,27 @@ void dalybms_setup() {
                     .categories = daly_bms::Categories::All,
                     .debugging = daly_bms::Debugging::Errors + daly_bms::Debugging::Requests + daly_bms::Debugging::Responses,
                 },
-                .serialId = MANAGER_ID, .serialRxPin = MANAGER_PIN_RX, .serialTxPin = MANAGER_PIN_TX, .enPin = MANAGER_PIN_EN
-            },
-            daly_bms::Interface::Config{
+                .serialId = MANAGER_ID,
+                .serialRxPin = MANAGER_PIN_RX,
+                .serialTxPin = MANAGER_PIN_TX,
+                .enPin = MANAGER_PIN_EN },
+            daly_bms::Interface::Config{ 
                 .manager = {
                     .id = BALANCE_NAME,
                     .capabilities = daly_bms::Capabilities::Balancing + daly_bms::Capabilities::TemperatureSensing - daly_bms::Capabilities::FirmwareIndex,
                     .categories = daly_bms::Categories::All,
                     .debugging = daly_bms::Debugging::Errors + daly_bms::Debugging::Requests + daly_bms::Debugging::Responses,
                 },
-                .serialId = BALANCE_ID, .serialRxPin = BALANCE_PIN_RX, .serialTxPin = BALANCE_PIN_TX, .enPin = BALANCE_PIN_EN
-            }
-        }
+                .serialId = BALANCE_ID,
+                .serialRxPin = BALANCE_PIN_RX,
+                .serialTxPin = BALANCE_PIN_TX,
+                .enPin = BALANCE_PIN_EN } }
     };
     dalyInterfaces = new daly_bms::Interfaces(*config);
     if (!dalyInterfaces || !dalyInterfaces->begin()) {
         DEBUG_PRINTF("*** FAILED\n");
         esp_deep_sleep_start();
     }
-
 }
 
 void dalybms_loop() {
@@ -177,11 +180,15 @@ void dalybms_loop() {
 }
 
 #ifdef PLATFORMIO
-void setup () { dalybms_setup(); }
-void loop () { dalybms_loop(); }
+void setup() {
+    dalybms_setup();
+}
+void loop() {
+    dalybms_loop();
+}
 #endif
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#endif // DALYBMS_STANDALONE PLATFORMIO
+#endif    // DALYBMS_STANDALONE PLATFORMIO

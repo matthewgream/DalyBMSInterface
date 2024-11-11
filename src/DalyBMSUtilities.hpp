@@ -9,7 +9,7 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#if !defined (DEBUG) && !defined (DEBUG_START)
+#if !defined(DEBUG) && !defined(DEBUG_START)
 
 #include <Arduino.h>
 
@@ -50,7 +50,7 @@ namespace daly_bms {
 
 #include <vector>
 
-template <typename T, typename ReturnType = void>
+template<typename T, typename ReturnType = void>
 class Handlerable {
 public:
     class Handler {
@@ -112,15 +112,15 @@ String BytesToHexString(const uint8_t bytes[], const char* separator = ":") {
 // -----------------------------------------------------------------------------------------------
 
 #include <time.h>
-#include <stdio.h> // XXX change from snprintf
+#include <stdio.h>    // XXX change from snprintf
 #include <Arduino.h>
 
 typedef unsigned long SystemTicks_t;
-STATIC_IF_ARDUINO_IDE inline SystemTicks_t systemTicksNow () {
-    return millis ();
+STATIC_IF_ARDUINO_IDE inline SystemTicks_t systemTicksNow() {
+    return millis();
 }
 STATIC_IF_ARDUINO_IDE inline unsigned long systemSecsSince(SystemTicks_t ticks) {
-    return (millis () - ticks) / 1000;
+    return (millis() - ticks) / 1000;
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -132,11 +132,11 @@ inline String toStringBitwise(T bits) {
     String x;
     for (T bit = static_cast<T>(1); bit < all; bit = static_cast<T>(static_cast<int>(bit) << 1))
         if ((bits & bit) != T::None)
-            x += (x.isEmpty () ? "" : ",") + toString (bit);
+            x += (x.isEmpty() ? "" : ",") + toString(bit);
     return x;
 }
 
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-} // namespace daly_bms
+}    // namespace daly_bms
