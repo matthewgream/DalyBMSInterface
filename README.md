@@ -34,7 +34,7 @@ The LICENSE is for non-commercial attribution and share-alike. There are no warr
 ### Supported Request/Responses
 
   - only ranges 0x90 to 0x98 are "officially" documented by Daly (see https://robu.in/wp-content/uploads/2021/10/Daly-CAN-Communications-Protocol-V1.0-1.pdf), the others are reverse engineered
-  - these are my groupings and ordering for what I think is sensible. 
+  - these are my namings, groupings and ordering for what I think is sensible
   - **Information** ... needed (if needed) once per session, read-only
     - RequestResponse_BMS_CONFIG (0x51)
     - RequestResponse_BMS_HARDWARE (0x63)
