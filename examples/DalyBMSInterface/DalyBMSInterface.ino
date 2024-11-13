@@ -5,14 +5,14 @@
 #define DALYBMS_STANDALONE
 #include "DalyBMSInterface.hpp"
 
-void dalybms_setup();
-void dalybms_loop();
+void dalybms_setup ();
+void dalybms_loop ();
 
 void setup () {
-    dalybms_setup();
+    dalybms_setup ();
 }
 void loop () {
-    dalybms_loop();
+    dalybms_loop ();
 }
 
 // -----------------------------------------------------------------------------------------------
