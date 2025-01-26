@@ -3,7 +3,7 @@
 
 This is a C++ (currently Arduino platform based, but only minimally platform dependant) interface for the Daly BMS (https://www.dalybms.com) as used in my own battery pack project (https://github.com/matthewgream/battery_pack).
 
-It is not officially supported not assisted. It is clean room built from scratch using official and unofficial sources and tested on a Daly Smart BMS device and balancer. It is not extensively tested across other Daly products.
+It is not officially supported not assisted. It is clean room built from scratch using official and unofficial sources and tested on a Daly Smart BMS device and balancer. It is not tested to other Daly products.
 
 The design and implementation is modular and extensible using modern C++. It supports multiple manager instances with capability/category selectivity of commands. For now, there are only reads and selected commands, not writes. 
 
@@ -87,4 +87,4 @@ The following sources were used, in addition to some reverse engineering, for th
 
 ### Hardware
 
-The serial interface (see https://diysolarforum.com/threads/daly-bms-led-12v-port-wiring.67951) is 3.3V so can be directly wired to GPIO. Note that the "S1" pin called "Button activation" is an active-LOW enabler of the interface if it sleeping. For example, the Daly SMART BMS 3-inch display screen has an activation button: if the BMS is sleeping, when this button is pushed, initially the display will show zero values until the BMS is awake and responds with correct information), therefore you need to use this as an EN. I'm not sure yet whether it can be held LOW for the duration or needs some cycling. So you need four wires : TX, RX, EN and GND. THis is the case for both the UART port "LED" interfaces.
+The serial interface (see https://diysolarforum.com/threads/daly-bms-led-12v-port-wiring.67951) is 3V3 so can be directly wired to GPIO. Note that the "S1" pin called "Button activation" is an active-LOW enabler of the interface if it sleeping. For example, the Daly SMART BMS 3-inch display screen has an activation button: if the BMS is sleeping, when this button is pushed, initially the display will show zero values until the BMS is awake and responds with correct information), therefore you need to use this as an EN. It seems like you just hold this low for the duration (there is no timeout). This, you need four wires: TX, RX, EN and GND. This is the case for both the UART port "LED" interfaces. I recommend being very careful with the hardware as the serial interface also carries a 12V line and if you miswire this, you will kill your microcontroller and possibly damage anything connected to the USB (your development machine).
