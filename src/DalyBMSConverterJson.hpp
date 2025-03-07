@@ -259,14 +259,14 @@ STATIC_IF_ARDUINO_IDE bool convertToJson (const Manager &src, JsonVariant dst) {
         convertElement (thresholds, src.thresholds.cell_balance);
         convertElement (thresholds, src.thresholds.shortcircuit);
     }
-    if (src.isEnabled (Categories::Status)) {
-        auto status = convertCategory (src.getConfig (), Categories::Status);
-        convertElement (status, src.status.status);
-        convertElement (status, src.status.voltage);
-        convertElement (status, src.status.sensor);
-        convertElement (status, src.status.mosfet);
-        convertElement (status, src.status.information);
-        convertElement (status, src.status.failure);
+    if (src.isEnabled (Categories::Conditions)) {
+        auto conditions = convertCategory (src.getConfig (), Categories::Conditions);
+        convertElement (conditions, src.conditions.status);
+        convertElement (conditions, src.conditions.voltage);
+        convertElement (conditions, src.conditions.sensor);
+        convertElement (conditions, src.conditions.mosfet);
+        convertElement (conditions, src.conditions.information);
+        convertElement (conditions, src.conditions.failure);
     }
     if (src.isEnabled (Categories::Diagnostics)) {
         auto diagnostics = convertCategory (src.getConfig (), Categories::Diagnostics);

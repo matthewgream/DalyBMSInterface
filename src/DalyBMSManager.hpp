@@ -128,10 +128,10 @@ enum class Categories {
     None = 0,
     Information = 1 << 0,
     Thresholds = 1 << 1,
-    Status = 1 << 2,
+    Conditions = 1 << 2,
     Diagnostics = 1 << 3,
     Commands = 1 << 4,
-    All = Information | Thresholds | Status | Diagnostics | Commands
+    All = Information | Thresholds | Conditions | Diagnostics | Commands
 };
 
 template <typename T>
@@ -204,8 +204,8 @@ inline String toString (Categories category) {
         return "Information";
     case Categories::Thresholds :
         return "Thresholds";
-    case Categories::Status :
-        return "Status";
+    case Categories::Conditions :
+        return "Conditions";
     case Categories::Diagnostics :
         return "Diagnostics";
     case Categories::Commands :
@@ -231,24 +231,26 @@ public:
                     return true;
                 } else {
                     if (it->second->isComplete ())
-                        DEBUG_PRINTF ("RequestResponseManager: frame complete but not valid\n");
+                        ALWAYS_DEBUG_PRINTF ("RequestResponseManager<%s>: frame complete but not valid\n", _id.c_str ());
                 }
             else {
                 if (it->second->isComplete ())
-                    DEBUG_PRINTF ("RequestResponseManager: frame complete but unprocessable\n");
+                    ALWAYS_DEBUG_PRINTF ("RequestResponseManager<%s>: frame complete but unprocessable\n", _id.c_str ());
             }
         else {
-            DEBUG_PRINTF ("RequestResponseManager: frame handler not found\n");
+            ALWAYS_DEBUG_PRINTF ("RequestResponseManager<%s>: frame handler not found, command=0x%02X\n", _id.c_str (), frame.getCommand ());
         }
         return false;
     }
 
-    explicit RequestResponseManager (const std::vector<RequestResponse *> &requests) :
+    explicit RequestResponseManager (const String &id, const std::vector<RequestResponse *> &requests) :
+        _id (id),
         _requests (requests) {
         for (auto &request : _requests)
             _requestsMap [request->getCommand ()] = request;
     }
 
+    const String _id;
     const std::vector<RequestResponse *> _requests {};
     std::map<uint8_t, RequestResponse *> _requestsMap {};
 };
@@ -261,19 +263,26 @@ void dumpDebug (const Manager &);
 class Manager {
 
 public:
-    typedef struct {
-        String id;
-        Capabilities capabilities { Capabilities::None };
-        Categories categories { Categories::All };
-        Debugging debugging { Debugging::Errors };
-    } Config;
-
     using Capabilities = daly_bms::Capabilities;
     using Categories = daly_bms::Categories;
     using Debugging = daly_bms::Debugging;
 
+    struct Config {
+        String id;
+        Capabilities capabilities { Capabilities::None };
+        Categories categories { Categories::All };
+        Debugging debugging { Debugging::Errors };
+    };
+
+    struct Status {
+        ActivationTracker received;
+    };
+
     const Config &getConfig () const {
         return config;
+    }
+    const Status &getStatus () const {
+        return status;
     }
     bool isEnabled (const RequestResponse *response) const {
         auto it = std::find_if (requestResponsesSpecifications.begin (), requestResponsesSpecifications.end (), [response] (const RequestResponseSpecification &item) {
@@ -311,14 +320,14 @@ public:
         RequestResponse_THRESHOLDS_CELL_SENSOR cell_sensor;
         RequestResponse_THRESHOLDS_CELL_BALANCE cell_balance;
     } thresholds {};
-    struct Status {
+    struct Conditions {
         RequestResponse_STATUS status;
         RequestResponse_VOLTAGE_MINMAX voltage;
         RequestResponse_SENSOR_MINMAX sensor;
         RequestResponse_MOSFET mosfet;
         RequestResponse_INFORMATION information;
         RequestResponse_FAILURE failure;
-    } status {};
+    } conditions {};
     struct Diagnostics {
         RequestResponse_VOLTAGES voltages;
         RequestResponse_SENSORS sensors;
@@ -352,12 +361,12 @@ public:
             {  Categories::Thresholds, Capabilities::Managing + Capabilities::Balancing,     thresholds.cell_balance },
             {  Categories::Thresholds, Capabilities::Managing + Capabilities::Balancing,     thresholds.shortcircuit },
 
-            {      Categories::Status,                           Capabilities::Managing,               status.status }, // Balancing response, but voltage only
-            {      Categories::Status, Capabilities::Managing + Capabilities::Balancing,              status.voltage },
-            {      Categories::Status,                 Capabilities::TemperatureSensing,               status.sensor }, // Balancing response, is probably onboard sensor
-            {      Categories::Status,                           Capabilities::Managing,               status.mosfet },
-            {      Categories::Status, Capabilities::Managing + Capabilities::Balancing,          status.information },
-            {      Categories::Status, Capabilities::Managing + Capabilities::Balancing,              status.failure },
+            {  Categories::Conditions,                           Capabilities::Managing,           conditions.status }, // Balancing response, but voltage only
+            {  Categories::Conditions, Capabilities::Managing + Capabilities::Balancing,          conditions.voltage },
+            {  Categories::Conditions,                 Capabilities::TemperatureSensing,           conditions.sensor }, // Balancing response, is probably onboard sensor
+            {  Categories::Conditions,                           Capabilities::Managing,           conditions.mosfet },
+            {  Categories::Conditions, Capabilities::Managing + Capabilities::Balancing,      conditions.information },
+            {  Categories::Conditions, Capabilities::Managing + Capabilities::Balancing,          conditions.failure },
 
             { Categories::Diagnostics, Capabilities::Managing + Capabilities::Balancing,        diagnostics.voltages },
             { Categories::Diagnostics,                 Capabilities::TemperatureSensing,         diagnostics.sensors },
@@ -367,7 +376,7 @@ public:
             {    Categories::Commands,                           Capabilities::Managing,             commands.charge },
             {    Categories::Commands,                           Capabilities::Managing,          commands.discharge }
     }),
-        config (conf), connector (connector), manager (buildRequestResponses (config.capabilities)) {
+        config (conf), connector (connector), manager (config.id, buildRequestResponses (config.capabilities)) {
 
         struct ResponseHandler : RequestResponseManager::Handler {
             Manager &manager;
@@ -375,18 +384,19 @@ public:
             explicit ResponseHandler (Manager &i) :
                 manager (i) { }
             bool handle (RequestResponse &response) override {
-                if (! initialised && response.getCommand () == manager.status.information) {
-                    manager.diagnostics.voltages.setCount (manager.status.information.numberOfCells);
-                    manager.diagnostics.sensors.setCount (manager.status.information.numberOfSensors);
-                    manager.diagnostics.balances.setCount (manager.status.information.numberOfCells);
+                manager.status.received++;
+                if (! initialised && response.getCommand () == manager.conditions.information) {
+                    manager.diagnostics.voltages.setCount (manager.conditions.information.numberOfCells);
+                    manager.diagnostics.sensors.setCount (manager.conditions.information.numberOfSensors);
+                    manager.diagnostics.balances.setCount (manager.conditions.information.numberOfCells);
                     initialised = true;
-                    if (! manager.isEnabled (Debugging::Responses)) {
-                        manager.manager.unregisterHandler (this);
-                        delete this;
-                    }
+                    // if (! manager.isEnabled (Debugging::Responses)) {
+                    //     manager.manager.unregisterHandler (this);
+                    //     delete this;
+                    // }
                 }
                 if (manager.isEnabled (Debugging::Responses)) {
-                    DEBUG_PRINTF ("DalyBMS<%s>: response %s -- ", manager.config.id.c_str (), response.getName ());
+                    ALWAYS_DEBUG_PRINTF ("DalyBMS<%s>: response %s -- ", manager.config.id.c_str (), response.getName ());
                     response.debugDump ();    // XXX change to toString
                 }
                 return true;
@@ -400,7 +410,7 @@ public:
                 manager (i) { }
             bool handle (RequestResponseFrame::Receiver::Handler::Type frame) {
                 if (manager.isEnabled (Debugging::Frames) || (manager.isEnabled (Debugging::Errors) && frame.second == Direction::Error))
-                    DEBUG_PRINTF ("DalyBMS<%s>: %s: %s\n", manager.config.id.c_str (), toString (frame.second).c_str (), frame.first.toString ().c_str ());
+                    ALWAYS_DEBUG_PRINTF ("DalyBMS<%s>: %s: %s\n", manager.config.id.c_str (), toString (frame.second).c_str (), frame.first.toString ().c_str ());
                 if (frame.second == Direction::Receive)
                     manager.manager.receiveFrame (frame.first);
                 return frame.second == Direction::Receive;
@@ -410,33 +420,45 @@ public:
     }
 
     void begin () {
-        DEBUG_PRINTF ("DalyBMS<%s>: begin\n", config.id.c_str ());
         connector.begin ();
     }
     void process () {
         connector.process ();
     }
 
+    template <uint8_t COMMAND>
+    void command (RequestResponse_TYPE_ONOFF<COMMAND> &request, typename RequestResponse_TYPE_ONOFF<COMMAND>::Setting setting) {
+        if (isEnabled (Categories::Commands) && isEnabled (&request) && request.isRequestable ()) {
+            if (isEnabled (Debugging::Requests))
+                ALWAYS_DEBUG_PRINTF ("DalyBMS<%s>: command %s\n", config.id.c_str (), request.getName ());
+            connector.write (request.prepareRequest (setting));
+        }
+    }
+
     void issue (RequestResponse &request) {
         if (request.isRequestable ()) {
             if (isEnabled (Debugging::Requests))
-                DEBUG_PRINTF ("DalyBMS<%s>: request %s\n", config.id.c_str (), request.getName ());
+                ALWAYS_DEBUG_PRINTF ("DalyBMS<%s>: request %s\n", config.id.c_str (), request.getName ());
             connector.write (request.prepareRequest ());
         }
     }
     void requestInstant () {
-        if (! isEnabled (Categories::Status))
-            return;
-        issue (status.status);
+        if (isEnabled (Categories::Conditions)) {
+            if (isEnabled (&conditions.status))
+                issue (conditions.status);
+            if (isEnabled (&conditions.mosfet))
+                issue (conditions.mosfet);
+            if (isEnabled (&conditions.failure))
+                issue (conditions.failure);
+        }
     }
-    void requestStatus () {
-        request (Categories::Status);
+    void requestConditions () {
+        request (Categories::Conditions);
     }
     void requestDiagnostics () {
         request (Categories::Diagnostics);
     }
     void requestInitial () {
-        DEBUG_PRINTF ("DalyBMS<%s>: requestInitial\n", config.id.c_str ());
         for (auto category : { Categories::Information, Categories::Thresholds })
             request (category);
     }
@@ -457,7 +479,7 @@ public:
     void request (const Categories category) {
         if (! isEnabled (category))
             return;
-        DEBUG_PRINTF ("DalyBMS<%s>: request%s\n", config.id.c_str (), toString (category).c_str ());
+        DALYBMS_DEBUG_PRINTF ("DalyBMS<%s>: request%s\n", config.id.c_str (), toString (category).c_str ());
         auto it = requestResponses.find (category);
         if (it != requestResponses.end ())
             for (auto r : it->second)
@@ -466,7 +488,7 @@ public:
     void update (const Categories category) {
         if (! isEnabled (category))
             return;
-        DEBUG_PRINTF ("DalyBMS<%s>: update%s\n", config.id.c_str (), toString (category).c_str ());
+        DALYBMS_DEBUG_PRINTF ("DalyBMS<%s>: update%s\n", config.id.c_str (), toString (category).c_str ());
         auto it = requestResponses.find (category);
         if (it != requestResponses.end ())
             for (auto r : it->second) {
@@ -495,6 +517,7 @@ private:
     }
 
     const Config &config;
+    Status status;
     Connector &connector;
     RequestResponseManager manager;
 };

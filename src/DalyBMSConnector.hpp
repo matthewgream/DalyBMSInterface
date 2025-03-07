@@ -16,32 +16,37 @@ namespace daly_bms {
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-class HardwareSerialConnector : public RequestResponseFrame::Receiver {
-public:
+struct SerialInterface {
     static inline constexpr int DEFAULT_SERIAL_BUFFER_RX = 1024, DEFAULT_SERIAL_BUFFER_TX = 512;
     static inline constexpr int DEFAULT_SERIAL_BAUD = 9600;
     static inline constexpr SerialConfig DEFAULT_SERIAL_CONFIG = SERIAL_8N1;
+};
 
-    explicit HardwareSerialConnector (HardwareSerial &serial) :
-        _serial (serial) {
+// -----------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------
+
+class StreamConnector : public RequestResponseFrame::Receiver {
+public:
+    explicit StreamConnector (Stream &stream) :
+        _stream (stream) {
     }
 
 protected:
     void begin () override {
     }
     bool readByte (uint8_t *byte) override {
-        if (_serial.available () > 0) {
-            *byte = _serial.read ();
+        if (_stream.available () > 0) {
+            *byte = _stream.read ();
             return true;
         }
         return false;
     }
     bool writeBytes (const uint8_t *data, const size_t size) override {
-        return _serial.write (data, size) == size;
+        return _stream.write (data, size) == size;
     }
 
 private:
-    HardwareSerial &_serial;
+    Stream &_stream;
 };
 
 // -----------------------------------------------------------------------------------------------

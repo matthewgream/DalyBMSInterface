@@ -9,29 +9,37 @@
 // -----------------------------------------------------------------------------------------------
 // -----------------------------------------------------------------------------------------------
 
-#if ! defined(DEBUG) && ! defined(DEBUG_START)
+#if ! defined(DALYBMS_DEBUG) && ! defined(DEBUG_START)
 
 #include <Arduino.h>
 
-#define DEBUG
+#ifndef DEBUG_LOGGER_SERIAL_BAUD
 #define DEBUG_LOGGER_SERIAL_BAUD 115200
-
-#ifdef DEBUG
-#define DEBUG_START(...) Serial.begin (DEBUG_LOGGER_SERIAL_BAUD);
-#define DEBUG_END(...) \
-    Serial.flush ();   \
-    Serial.end ();
-#define DEBUG_PRINTF    Serial.printf
-#define DEBUG_ONLY(...) __VA_ARGS__
-#else
-#define DEBUG_START(...)
-#define DEBUG_END(...)
-#define DEBUG_PRINTF(...) \
-    do {                  \
-    } while (0)
-#define DEBUG_ONLY(...)
 #endif
 
+#ifdef DEBUG
+#define DALYBMS_DEBUG_START(...) Serial.begin (DEBUG_LOGGER_SERIAL_BAUD);
+#define DALYBMS_DEBUG_END(...) \
+    Serial.flush ();   \
+    Serial.end ();
+#define DALYBMS_DEBUG_PRINTF    Serial.printf
+#define ALWAYS_DEBUG_PRINTF    Serial.printf
+#else
+#define DALYBMS_DEBUG_START(...)
+#define DALYBMS_DEBUG_END(...)
+#define DALYBMS_DEBUG_PRINTF(...) \
+    do {                  \
+    } while (0)
+#define ALWAYS_DEBUG_PRINTF    Serial.printf        
+#endif
+
+#else
+#define DALYBMS_DEBUG_START(...)
+#define DALYBMS_DEBUG_END(...)
+#define DALYBMS_DEBUG_PRINTF(...) \
+    do {                  \
+    } while (0)
+#define ALWAYS_DEBUG_PRINTF    Serial.printf        
 #endif
 
 #ifndef PLATFORMIO

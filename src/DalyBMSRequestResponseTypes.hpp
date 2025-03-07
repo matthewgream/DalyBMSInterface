@@ -203,7 +203,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("%s\n", string.c_str ());
+        ALWAYS_DEBUG_PRINTF ("%s\n", string.c_str ());
     }
     using RequestResponseCommand<COMMAND>::isValid;
 
@@ -235,7 +235,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("packCapacity=%.1fAh, nominalCellVoltage=%.1fV\n",
+        ALWAYS_DEBUG_PRINTF ("packCapacity=%.1fAh, nominalCellVoltage=%.1fV\n",
                       packCapacityAh,
                       nominalCellVoltage);
     }
@@ -261,7 +261,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("boards=%d, cells=%d,%d,%d, sensors=%d,%d,%d\n",
+        ALWAYS_DEBUG_PRINTF ("boards=%d, cells=%d,%d,%d, sensors=%d,%d,%d\n",
                       boards,
                       cells [0],
                       cells [1],
@@ -291,7 +291,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("cumulativeCharge=%.1fAh, cumulativeDischarge=%.1fAh\n",
+        ALWAYS_DEBUG_PRINTF ("cumulativeCharge=%.1fAh, cumulativeDischarge=%.1fAh\n",
                       cumulativeChargeAh,
                       cumulativeDischargeAh);
     }
@@ -337,7 +337,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("mode=%s, type=%s, date=%s, sleep=%d, unknown 1=%d, 2=%d\n",
+        ALWAYS_DEBUG_PRINTF ("mode=%s, type=%s, date=%s, sleep=%d, unknown 1=%d, 2=%d\n",
                       toString (mode).c_str (),
                       toString (type).c_str (),
                       productionDate.toString ().c_str (),
@@ -385,7 +385,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("max L1=%s,L2=%s, min L1=%s,L2=%s\n",    // XXX units
+        ALWAYS_DEBUG_PRINTF ("max L1=%s,L2=%s, min L1=%s,L2=%s\n",    // XXX units
                       detail::toString (value.L1.max).c_str (),
                       detail::toString (value.L2.max).c_str (),
                       detail::toString (value.L1.min).c_str (),
@@ -436,7 +436,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("charge max L1=%dC,L2=%dC min L1=%dC,L2=%dC, discharge max L1=%dC,L2=%dC min L1=%dC,L2=%dC\n",
+        ALWAYS_DEBUG_PRINTF ("charge max L1=%dC,L2=%dC min L1=%dC,L2=%dC, discharge max L1=%dC,L2=%dC min L1=%dC,L2=%dC\n",
                       charge.L1.max,
                       charge.L2.max,
                       charge.L1.min,
@@ -475,7 +475,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("voltage diff L1=%.3fV,L2=%.3fV, temperature diff L1=%dC,L2=%dC\n",
+        ALWAYS_DEBUG_PRINTF ("voltage diff L1=%.3fV,L2=%.3fV, temperature diff L1=%dC,L2=%dC\n",
                       voltage.L1,
                       voltage.L2,
                       temperature.L1,
@@ -502,7 +502,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("voltage enable=%.3fV, acceptable=%.3fV\n",
+        ALWAYS_DEBUG_PRINTF ("voltage enable=%.3fV, acceptable=%.3fV\n",
                       voltageEnableThreshold,
                       voltageAcceptableDifference);
     }
@@ -527,7 +527,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("shutdown=%.1fA, sampling=%.3fR\n",
+        ALWAYS_DEBUG_PRINTF ("shutdown=%.1fA, sampling=%.3fR\n",
                       currentShutdownA,
                       currentSamplingR);
     }
@@ -552,7 +552,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("%s\n", toString (date, time).c_str ());
+        ALWAYS_DEBUG_PRINTF ("%s\n", toString (date, time).c_str ());
     }
     using RequestResponseCommand<0x61>::isValid;
 
@@ -589,10 +589,13 @@ public:
     const char *getName () const override {
         return "RequestResponse_STATUS";
     }
+    String toString () const {
+        return isValid () ? String (voltage, 1) + "V, " + String (current, 1) + "A, " + String (charge, 0) + "%" : "";
+    }
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("%.1f volts, %.1f amps, %.1f percent\n",
+        ALWAYS_DEBUG_PRINTF ("%.1f volts, %.1f amps, %.1f percent\n",
                       voltage,
                       current,
                       charge);
@@ -622,7 +625,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("max=%s (#%d), min=%s (#%d)\n",    // XXX units
+        ALWAYS_DEBUG_PRINTF ("max=%s (#%d), min=%s (#%d)\n",    // XXX units
                       detail::toString (value.max).c_str (),
                       cellNumber.max,
                       detail::toString (value.min).c_str (),
@@ -685,7 +688,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("state=%s, MOS charge=%s, discharge=%s, cycle=%d, capacity=%.1fAh\n",
+        ALWAYS_DEBUG_PRINTF ("state=%s, MOS charge=%s, discharge=%s, cycle=%d, capacity=%.1fAh\n",
                       toString (state).c_str (),
                       mosChargeState ? "on" : "off",
                       mosDischargeState ? "on" : "off",
@@ -717,7 +720,7 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("cells=%d, sensors=%d, charger=%s, load=%s, cycles=%d\n",
+        ALWAYS_DEBUG_PRINTF ("cells=%d, sensors=%d, charger=%s, load=%s, cycles=%d\n",
                       numberOfCells,
                       numberOfSensors,
                       chargerStatus ? "on" : "off",
@@ -759,10 +762,10 @@ public:
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("%u /", values.size ());
+        ALWAYS_DEBUG_PRINTF ("%u /", values.size ());
         for (const auto &v : values)
-            DEBUG_PRINTF (" %s", detail::toString (v).c_str ());    // XXX units
-        DEBUG_PRINTF ("\n");
+            ALWAYS_DEBUG_PRINTF (" %s", detail::toString (v).c_str ());    // XXX units
+        ALWAYS_DEBUG_PRINTF ("\n");
     }
     using RequestResponseCommand<COMMAND>::isValid;
 
@@ -813,30 +816,34 @@ class RequestResponse_FAILURE : public RequestResponseCommand<0x98> {
 
 public:
     bool show {};
-    std::bitset<NUM_FAILURE_CODES> bits {};
+    std::bitset<NUM_FAILURE_CODES> active {};
     size_t count {};
     size_t getFailureList (const char **output, const size_t maxFailures) const {
         size_t c = 0;
-        for (size_t i = 0; i < NUM_FAILURE_CODES && count < maxFailures; ++i)
-            if (bits [i])
+        for (size_t i = 0; i < NUM_FAILURE_CODES && c < maxFailures; ++i)
+            if (active [i])
                 output [c++] = FAILURE_DESCRIPTIONS [i];
         return c;
     }
     const char *getName () const override {
         return "RequestResponse_FAILURE";
     }
+    String toString () const {
+        String r;
+        if (isValid () && count > 0) {
+            const char *failures [count];
+            for (size_t i = 0, c = getFailureList (failures, count); i < c; i++)
+                r += (r.isEmpty () ? "" : ", ") + String (failures [i]);
+        }
+        return r;
+    }
     void debugDump () const override {
         if (! isValid ())
             return;
-        DEBUG_PRINTF ("show=%s, count=%d", show ? "yes" : "no", count);
-        if (count > 0) {
-            DEBUG_PRINTF (", active=[");
-            const char *failures [count];
-            for (size_t i = 0, c = getFailureList (failures, count); i < c; i++)
-                DEBUG_PRINTF ("%s%s", i == 0 ? "" : ",", failures [i]);
-            DEBUG_PRINTF ("]");
-        }
-        DEBUG_PRINTF ("\n");
+        ALWAYS_DEBUG_PRINTF ("show=%s, count=%d", show ? "yes" : "no", count);
+        if (count > 0)
+            ALWAYS_DEBUG_PRINTF (", active=[%s]", toString ().c_str ());
+        ALWAYS_DEBUG_PRINTF ("\n");
     }
     using RequestResponseCommand<0x98>::isValid;
 
@@ -844,7 +851,7 @@ protected:
     bool processResponseFrame (const RequestResponseFrame &frame, const size_t) override {
         count = 0;
         for (size_t index = 0; index < NUM_FAILURE_CODES; ++index)
-            if ((bits [index] = frame.getBit (index)))
+            if ((active [index] = frame.getBit (index)))
                 count++;
         show = frame.getUInt8 (7) == 0x03;
         return setValid ();
@@ -852,55 +859,62 @@ protected:
 
 private:
     static constexpr std::array<const char *, NUM_FAILURE_CODES> FAILURE_DESCRIPTIONS = {
-        "Cell voltage high level 1", "Cell voltage high level 2", "Cell voltage low level 1", "Cell voltage low level 2", "Pack voltage high level 1", "Pack voltage high level 2", "Pack voltage low level 1", "Pack voltage low level 2",    // Byte 0
-        "Charge temperature high level 1",
-        "Charge temperature high level 2",
-        "Charge temperature low level 1",
-        "Charge temperature low level 2",
-        "Discharge temperature high level 1",
-        "Discharge temperature high level 2",
-        "Discharge temperature low level 1",
-        "Discharge temperature low level 2",    // Byte 1
-        "Charge current high level 1",
-        "Charge current high level 2",
-        "Discharge current high level 1",
-        "Discharge current high level 2",
-        "SOC high level 1",
-        "SOC high level 2",
-        "SOC low level 1",
-        "SOC low level 2",    // Byte 2
-        "Cell voltage difference high level 1",
-        "Cell voltage difference high level 2",
-        "Cell temperature difference high level 1",
-        "Cell temperature difference high level 2",
-        "Reserved 3-4",
-        "Reserved 3-5",
-        "Reserved 3-6",
-        "Reserved 3-7",    // Byte 3
-        "Charge MOSFET temperature high",
-        "Discharge MOSFET temperature high",
-        "Charge MOSFET temperature sensor fail",
-        "Discharge MOSFET temperature sensor fail",
-        "Charge MOSFET adhesion fail",
-        "Discharge MOSFET adhesion fail",
-        "Charge MOSFET breaker fail",
-        "Discharge MOSFET breaker fail",    // Byte 4
-        "AFE acquisition module fail",
-        "Voltage sensor fail",
-        "Temperature sensor fail",
-        "EEPROM storage fail",
-        "RTC fail",
-        "Precharge fail",
-        "Vehicle communication fail",
-        "Network communication fail",    // Byte 5
-        "Current sensor module fail",
-        "Voltage sensor module fail",
-        "Short circuit protection fail",
-        "Low voltage no charging",
-        "MOS GPS or soft switch MOS off",
-        "Reserved 6-5",
-        "Reserved 6-6",
-        "Reserved 6-7",    // Byte 6
+        "cell voltage high level 1",
+        "cell voltage high level 2",
+        "cell voltage low level 1",
+        "cell voltage low level 2",
+        "pack voltage high level 1",
+        "pack voltage high level 2",
+        "pack voltage low level 1",
+        "pack voltage low level 2",    // Byte 0
+        "charge temperature high level 1",
+        "charge temperature high level 2",
+        "charge temperature low level 1",
+        "charge temperature low level 2",
+        "discharge temperature high level 1",
+        "discharge temperature high level 2",
+        "discharge temperature low level 1",
+        "discharge temperature low level 2",    // Byte 1
+        "charge current high level 1",
+        "charge current high level 2",
+        "discharge current high level 1",
+        "discharge current high level 2",
+        "state-of-charge high level 1",
+        "state-of-charge high level 2",
+        "state-of-charge low level 1",
+        "state-of-charge low level 2",    // Byte 2
+        "cell voltage difference high level 1",
+        "cell voltage difference high level 2",
+        "cell temperature difference high level 1",
+        "cell temperature difference high level 2",
+        "reserved 3-4",
+        "reserved 3-5",
+        "reserved 3-6",
+        "reserved 3-7",    // Byte 3
+        "charge mosfet temperature high",
+        "discharge mosfet temperature high",
+        "charge mosfet temperature sensor fail",
+        "discharge mosfet temperature sensor fail",
+        "charge mosfet adhesion fail",
+        "discharge mosfet adhesion fail",
+        "charge mosfet breaker fail",
+        "discharge mosfet breaker fail",    // Byte 4
+        "acquisition module fail",
+        "voltage sensor fail",
+        "temperature sensor fail",
+        "eeprom storage fail",
+        "real-time-clock fail",
+        "precharge fail",
+        "communication fail",
+        "internal communication fail",    // Byte 5
+        "current sensor module fail",
+        "voltage sensor module fail",
+        "short circuit protection fail",
+        "low voltage no charging",
+        "mos gps or soft switch mos off",
+        "reserved 6-5",
+        "reserved 6-6",
+        "reserved 6-7",    // Byte 6
     };
 };
 
