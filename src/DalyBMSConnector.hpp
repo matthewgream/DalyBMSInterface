@@ -34,6 +34,9 @@ public:
 protected:
     void begin () override {
     }
+    void end () override {
+        _stream.flush ();
+    }
     bool readByte (uint8_t *byte) override {
         if (_stream.available () > 0) {
             *byte = _stream.read ();

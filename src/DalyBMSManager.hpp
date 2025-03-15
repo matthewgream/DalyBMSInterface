@@ -37,7 +37,8 @@ using RequestResponseFrame_Handlerable = std::pair<const RequestResponseFrame &,
 class RequestResponseFrame_Receiver : public Handlerable<RequestResponseFrame_Handlerable, bool> {
 
 public:
-    virtual void begin () { }
+    virtual void begin () = 0;
+    virtual void end () = 0;
     void write (const RequestResponseFrame &frame) {
         notifyHandlers (Handler::Type (frame, Direction::Transmit));
         writeBytes (frame.data (), frame.size ());
@@ -276,6 +277,7 @@ public:
 
     struct Status {
         ActivationTracker received;
+        ActivationTracker badframes;
     };
 
     const Config &getConfig () const {
@@ -411,6 +413,8 @@ public:
             bool handle (RequestResponseFrame::Receiver::Handler::Type frame) {
                 if (manager.isEnabled (Debugging::Frames) || (manager.isEnabled (Debugging::Errors) && frame.second == Direction::Error))
                     ALWAYS_DEBUG_PRINTF ("DalyBMS<%s>: %s: %s\n", manager.config.id.c_str (), toString (frame.second).c_str (), frame.first.toString ().c_str ());
+                if (frame.second == Direction::Error)
+                    manager.status.badframes ++;
                 if (frame.second == Direction::Receive)
                     manager.manager.receiveFrame (frame.first);
                 return frame.second == Direction::Receive;
@@ -418,9 +422,13 @@ public:
         };
         connector.registerHandler (new FrameHandler (*this));
     }
+    friend RequestResponseFrame::Receiver::Handler;
 
     void begin () {
         connector.begin ();
+    }
+    void end () {
+        connector.end ();
     }
     void process () {
         connector.process ();
